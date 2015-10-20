@@ -1,18 +1,19 @@
-package com.github.andr83.parsek.parser
-
-import org.json4s._
-import org.json4s.jackson.JsonMethods.{parse => jsonParse}
+package com.github.andr83.parsek.pipe.parser
 
 import com.github.andr83.parsek._
+import com.github.andr83.parsek.pipe.ParserPipe
+import com.typesafe.config.{ConfigFactory, Config}
+import org.json4s._
+import org.json4s.jackson.JsonMethods.{parse => jsonParse}
 
 /**
  * @author andr83
  */
-class JsonParser(implicit override val context: PipeContext) extends StringParser {
+case class JsonParser(config: Config) extends ParserPipe(config) {
 
-  override def parseString(source: String): PValue = {
-    val json = jsonParse(source)
-    mapJson(json)
+  def parse(raw: String): Option[PValue] = {
+    val json = jsonParse(raw)
+    Some(mapJson(json))
   }
 
   def mapJson(json: JValue): PValue = json match {
@@ -39,5 +40,5 @@ class JsonParser(implicit override val context: PipeContext) extends StringParse
 }
 
 object JsonParser {
-  def apply()(implicit context: PipeContext): JsonParser = new JsonParser()
+  def apply(): JsonParser = JsonParser(ConfigFactory.empty())
 }

@@ -5,6 +5,7 @@ val guavaVersion             = "14.0"
 val hadoopVersion            = "2.3.+"
 val jacksonCoreVersion       = "2.4.4"
 val jacksonVersion           = "2.6.1"
+val json4SVersion            = "3.3.+"
 val openCsvVersion           = "2.3"
 val playJsonVersion          = "2.4.3"
 val scalaLoggingVersion      = "2.1.2"
@@ -13,7 +14,7 @@ val scalaTimeVersion         = "1.8.+"
 val scoptVersion             = "3.3.+"
 val slf4jVersion             = "1.7.+"
 val sparkVersion             = "1.3.+"
-val typesafeConfigVersion    = "1.2.1"
+val typesafeConfigVersion    = "1.3.+"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
@@ -26,8 +27,33 @@ lazy val commonSettings = Seq(
   )
 )
 
+val jacksonCoreExclusion = ExclusionRule("com.fasterxml.jackson.core")
+val guavaExclusion = ExclusionRule("com.google.guava", "guava")
+val sparkExclusions = Seq(
+  jacksonCoreExclusion,
+  guavaExclusion,
+  ExclusionRule("org.apache.hadoop"),
+  ExclusionRule("org.apache.hbase"),
+  ExclusionRule("javax.servlet"),
+  ExclusionRule("org.mortbay.jetty", "servlet-api"),
+  ExclusionRule("commons-beanutils", "commons-beanutils-core"),
+  ExclusionRule("commons-collections", "commons-collections"),
+  ExclusionRule("com.esotericsoftware.minlog", "minlog")
+)
+val hadoopExclusion = Seq(
+  guavaExclusion
+)
+
+val hadoopDependencies = Seq(
+  "com.google.guava"            % "guava"                   % guavaVersion,
+  "org.apache.hadoop"           % "hadoop-client"           % hadoopVersion
+    excludeAll (hadoopExclusion: _*),
+  "org.apache.hadoop"           % "hadoop-hdfs"             % hadoopVersion
+    excludeAll (hadoopExclusion: _*)
+)
+
 lazy val parsek = project.in(file("."))
-  .aggregate(core)
+  .aggregate(core, spark)
 
 lazy val core = project
   .settings(commonSettings: _*)
@@ -36,10 +62,26 @@ lazy val core = project
     libraryDependencies ++= Seq(
       "org.slf4j"                       %  "slf4j-api"            % slf4jVersion,
       "org.slf4j"                       %  "slf4j-simple"         % slf4jVersion % "test",
+      "com.typesafe"                    %  "config"               % typesafeConfigVersion,
       "com.typesafe.scala-logging"      %% "scala-logging-slf4j"  % scalaLoggingVersion,
-      "org.json4s"                      %% "json4s-native"        % "3.3.+",
-      "org.json4s"                      %% "json4s-jackson"       % "3.3.+",
+      "org.json4s"                      %% "json4s-native"        % json4SVersion,
+      "org.json4s"                      %% "json4s-jackson"       % json4SVersion,
       "com.github.nscala-time"          %% "nscala-time"          % scalaTimeVersion,
       "org.scalatest"                   %% "scalatest"            % scalaTestVersion % "test"
-    )
+    ) ++ hadoopDependencies
   )
+
+lazy val spark = project
+  .settings(commonSettings: _*)
+  .settings(
+    name:="parsek-spark",
+    libraryDependencies ++= hadoopDependencies ++ Seq(
+      "com.github.scopt"            %% "scopt"                  % scoptVersion,
+      "org.apache.spark"            %% "spark-core"             % sparkVersion
+        excludeAll (sparkExclusions: _*),
+      "org.apache.spark"            %% "spark-streaming"        % sparkVersion
+        excludeAll (sparkExclusions: _*),
+      "org.apache.spark"            %% "spark-streaming-kafka"  % sparkVersion
+        excludeAll (sparkExclusions: _*)
+    )
+  ).dependsOn(core)

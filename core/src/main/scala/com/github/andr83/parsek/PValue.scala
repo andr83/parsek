@@ -1,10 +1,13 @@
 package com.github.andr83.parsek
 
+import com.github.nscala_time.time.Imports._
+
 /**
  * @author andr83
  */
 sealed abstract class PValue {
   type valueType
+
   def value: valueType
 }
 
@@ -28,6 +31,14 @@ final case class PBool(value: Boolean) extends PValue {
   override type valueType = Boolean
 }
 
+final case class PTime(value: DateTime) extends PValue {
+  override type valueType = DateTime
+}
+
+object PTime {
+  def apply(time: Long): PTime = PTime(new DateTime(time))
+}
+
 final case class PMap(value: Map[String, PValue]) extends PValue {
   type valueType = Map[String, PValue]
 }
@@ -39,13 +50,14 @@ final case class PList(value: List[PValue]) extends PValue {
 object PValue {
   def apply(value: Any): PValue = value match {
     case lv: List[_] => PList(lv.map(apply))
-    case mv: Map[_,_] => PMap(mv.filterKeys(_.isInstanceOf[String]).asInstanceOf[Map[String, Any]].mapValues(apply))
-    case v: String  => PString(v)
-    case v: Int  => PInt(v)
-    case v: Long  => PLong(v)
-    case v: Float  => PDouble(v)
-    case v: Double  => PDouble(v)
-    case v: PValue  => v
+    case mv: Map[_, _] => PMap(mv.filterKeys(_.isInstanceOf[String]).asInstanceOf[Map[String, Any]].mapValues(apply))
+    case v: String => PString(v)
+    case v: Int => PInt(v)
+    case v: Long => PLong(v)
+    case v: Float => PDouble(v)
+    case v: Double => PDouble(v)
+    case v: DateTime => PTime(v)
+    case v: PValue => v
     case v => throw new IllegalArgumentException("Unsupported argument type: " + v.getClass.getName)
   }
 }
@@ -56,15 +68,4 @@ object PList {
 
 object PMap {
   def empty = PMap(Map.empty[String, PValue])
-}
-
-object PValueImplicits {
-  implicit def strToPValue(value: String): PString = PString(value)
-  implicit def intToPValue(value: Int): PInt = PInt(value)
-  implicit def longToPValue(value: Long): PLong = PLong(value)
-  implicit def floatToPValue(value: Float): PDouble = PDouble(value)
-  implicit def doubleToPValue(value: Double): PDouble = PDouble(value)
-  implicit def booleanToPValue(value: Boolean): PBool = PBool(value)
-  implicit def mapToPValue(value: Map[String, PValue]): PMap = PMap(value)
-  implicit def listToPValue(value: List[PValue]): PList = PList(value)
 }
