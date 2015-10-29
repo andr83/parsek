@@ -8,6 +8,7 @@ val jacksonVersion           = "2.6.1"
 val json4SVersion            = "3.3.+"
 val openCsvVersion           = "2.3"
 val playJsonVersion          = "2.4.3"
+val scalaArmVersion          = "1.4"
 val scalaLoggingVersion      = "2.1.2"
 val scalaTestVersion         = "2.2.+"
 val scalaTimeVersion         = "1.8.+"
@@ -24,6 +25,24 @@ lazy val commonSettings = Seq(
   resolvers += Resolver.sonatypeRepo("releases"),
   externalResolvers := Seq(
     "Maven Central Server" at "http://repo1.maven.org/maven2"
+  ),
+  assemblyMergeStrategy in assembly := {
+    case PathList("javax", "servlet", xs @ _*) => MergeStrategy.last
+    case PathList("javax", xs @ _*) => MergeStrategy.last
+    case PathList("org", "apache", xs @ _*) => MergeStrategy.last
+    case PathList("org", "eclipse", "jetty", "orbit", xs @ _*) => MergeStrategy.last
+    case PathList("com", "google", xs @ _*) => MergeStrategy.last
+    case PathList("com", "esotericsoftware", xs @ _*) => MergeStrategy.last
+    case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+    case PathList("META-INF", "ECLIPSEF.RSA") => MergeStrategy.discard
+    case PathList("META-INF", xs @ _*) => MergeStrategy.last
+    case "plugin.properties" => MergeStrategy.discard
+    case "about.html" => MergeStrategy.rename
+    case "reference.conf" => MergeStrategy.concat
+    case _ => MergeStrategy.last
+  },
+  assemblyShadeRules in assembly := Seq(
+    ShadeRule.rename("com.fasterxml.jackson.**" -> "shade.com.@1").inAll
   )
 )
 
@@ -35,6 +54,7 @@ val sparkExclusions = Seq(
   ExclusionRule("org.apache.hadoop"),
   ExclusionRule("org.apache.hbase"),
   ExclusionRule("javax.servlet"),
+  ExclusionRule("org.eclipse.jetty.orbit", "servlet-api"),
   ExclusionRule("org.mortbay.jetty", "servlet-api"),
   ExclusionRule("commons-beanutils", "commons-beanutils-core"),
   ExclusionRule("commons-collections", "commons-collections"),
@@ -66,7 +86,10 @@ lazy val core = project
       "com.typesafe.scala-logging"      %% "scala-logging-slf4j"  % scalaLoggingVersion,
       "org.json4s"                      %% "json4s-native"        % json4SVersion,
       "org.json4s"                      %% "json4s-jackson"       % json4SVersion,
+      "com.jsuereth"                    %% "scala-arm"            % scalaArmVersion,
       "com.github.nscala-time"          %% "nscala-time"          % scalaTimeVersion,
+      "javax.servlet"%"javax.servlet-api"%"3.0.1",
+      "org.xerial.snappy" % "snappy-java" % "1.1.2",
       "org.scalatest"                   %% "scalatest"            % scalaTestVersion % "test"
     ) ++ hadoopDependencies
   )

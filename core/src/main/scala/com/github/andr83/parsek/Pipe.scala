@@ -7,14 +7,17 @@ import com.typesafe.scalalogging.slf4j.LazyLogging
 /**
  * @author andr83
  */
-trait Pipe extends LazyLogging {
+trait Pipe extends LazyLogging with Serializable {
   val config: Config
   def run(value: PValue): Option[PValue]
 }
 
 object Pipe {
-  def apply(name: String, config: Config): Pipe = if (name.startsWith("$")) name.substring(1) match {
+  def apply(name: String, config: Config): Pipe = if (name.contains(".")) {
+    val constructor = Class.forName(name).getConstructor(classOf[Config])
+    constructor.newInstance(config).asInstanceOf[Pipe]
+  } else name match {
     case "json" => JsonParser(config)
     case _ => throw new IllegalStateException(s"Unknown pipe $name")
-  } else throw new IllegalArgumentException(s"Pipe name must begin with $$. Actual: $name")
+  }
 }

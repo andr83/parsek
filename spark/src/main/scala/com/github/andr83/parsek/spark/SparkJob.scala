@@ -1,6 +1,7 @@
 package com.github.andr83.parsek.spark
 
 import java.net.URI
+import java.io.File
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -15,6 +16,7 @@ abstract class SparkJob {
   type PathPredicate = Path => Boolean
 
   implicit def toPath(path: String): Path = new Path(path)
+  implicit def toFile(path: String): File = new File(path)
 
   lazy val optionParser = new scopt.OptionParser[Unit](getClass.getSimpleName) {
     override def showUsageOnError = true
@@ -56,17 +58,17 @@ abstract class SparkJob {
   var sparkLogLevel = Level.WARN
   var hdfsUri = ""
 
-  opt[String]('m', "sparkMemory") foreach {
+  opt[String]("sparkMemory") foreach {
     sparkMemory = _
   } text "spark.executor.memory value, default 1G "
 
   opt[String]("sparkMaster") foreach { value =>
     sparkLogLevel = Level.toLevel(value)
-  } text "Spark logger output level. Default WARN"
+  } text "Spark master host, default \"local\" "
 
   opt[String]("sparkLogLevel") foreach {
     hdfsUri = _
-  } text "Hdfs file system uri"
+  } text "Spark logger output level. Default WARN"
 
   opt[String]("hadoopUser") foreach {
     System.setProperty("HADOOP_USER_NAME", _)
@@ -97,7 +99,7 @@ abstract class SparkJob {
     while (it.hasNext) {
       val status = it.next()
       if (status.isFile && filter(status.getPath)) {
-        files += status.getPath.toString
+        files = status.getPath.toString :: files
       }
     }
     files
