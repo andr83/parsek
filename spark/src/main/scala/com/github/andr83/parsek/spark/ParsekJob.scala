@@ -3,6 +3,7 @@ package com.github.andr83.parsek.spark
 import com.github.andr83.parsek._
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.commons.io.IOUtils
+import org.apache.spark.rdd.RDD
 import resource._
 
 /**
@@ -30,15 +31,19 @@ object ParsekJob extends SparkJob {
       case config: Config => Source(config)
     }) getOrElse (throw new IllegalStateException("Sources config should not be empty"))
 
-    val rdd = sources.map(_(this)).reduce(_ ++ _)
+    val rdd: RDD[PValue] = sources.map(_(this)).reduce(_ ++ _)
 
-    val outRdd = config.getObjectListOpt("pipes") map (Pipeline(_)) map (pipeline => {
-      rdd.flatMap(pipeline.run(_)).flatMap {
+    val outRdd: RDD[PValue] = (config.getObjectListOpt("pipes") map (Pipeline(_)) map (pipeline => {
+      rdd.flatMap(pipeline.run).flatMap {
         case PList(list) => list
-        case value => List(value)
+        case value: PValue => List(value)
       }
-    }) getOrElse rdd
+    }) getOrElse rdd).cache()
 
-    outRdd.collect().foreach(println)
+    val sinks = config.getConfigListOpt("sinks") map (_ map {
+      case config: Config => Sink(config)
+    })
+
+    sinks.foreach(_.foreach(sink => sink.sink(outRdd)))
   }
 }

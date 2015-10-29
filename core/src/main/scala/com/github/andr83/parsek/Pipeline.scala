@@ -1,6 +1,6 @@
 package com.github.andr83.parsek
 
-import com.typesafe.config.{ConfigObject, Config}
+import com.typesafe.config.ConfigObject
 
 import scala.collection.JavaConversions._
 
@@ -17,8 +17,6 @@ class Pipeline(pipes: Iterable[Pipe]) extends Serializable {
 }
 
 object Pipeline {
-  //def apply(config: ConfigObject): Pipeline = apply(config :: Nil)
-
   def apply(configs: Iterable[ConfigObject]): Pipeline = {
     val pipes = configs map (config => {
       val map = config.unwrapped()
