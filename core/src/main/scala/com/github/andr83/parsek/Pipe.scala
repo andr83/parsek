@@ -17,7 +17,7 @@ object Pipe {
     val constructor = Class.forName(name).getConstructor(classOf[Config])
     constructor.newInstance(config).asInstanceOf[Pipe]
   } else name match {
-    case "json" => JsonParser(config)
+    case "parseJson" => JsonParser(config)
     case _ => throw new IllegalStateException(s"Unknown pipe $name")
   }
 }

@@ -18,7 +18,7 @@ class TextFileSink(config: Config) extends Sink(config) {
     val out = serializer map(serializerConf => rdd.mapPartitions(it => {
       val s = Serializer(serializerConf)
       it.map(v => new String(s.write(v).map(_.toChar)))
-    }).filter(_.nonEmpty)) getOrElse rdd
+    }).filter(_.trim.nonEmpty)) getOrElse rdd
     codec match {
       case Some(codecClass) => out.saveAsTextFile(path, codecClass)
       case None => out.saveAsTextFile(path)

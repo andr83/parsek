@@ -13,7 +13,7 @@ import scala.collection.JavaConversions._
 class CsvSerializer(config:Config) extends Serializer(config) {
   var fields = config.getStringList("fields").toList
   val delimeter = config.getStringOpt("delimiter").getOrElse(",")
-  val enclosure = config.getStringOpt("enclosure").getOrElse(",")
+  val enclosure = config.getStringOpt("enclosure").getOrElse("\"")
   val listDelimiter = config.getStringOpt("listDelimiter").getOrElse("|")
   val mapFieldDelimiter = config.getStringOpt("mapFieldDelimiter").getOrElse(":")
 
@@ -28,7 +28,7 @@ class CsvSerializer(config:Config) extends Serializer(config) {
         field <- fields
       } yield map.get(field).map(valueToString)
       res map {
-        case Some(str) => if (str.contains(delimeter)) enclosure + str + enclosure else str
+        case Some(str) => quoteAndEscape(str)
         case None => ""
       } mkString delimeter map(_.toByte) toArray
     case _ => Array.empty[Byte]
@@ -45,5 +45,14 @@ class CsvSerializer(config:Config) extends Serializer(config) {
     case PMap(map) => map mapValues valueToString map {
       case (k,v) => k + mapFieldDelimiter + v
     } mkString listDelimiter
+  }
+
+  def quoteAndEscape(str: String): String = {
+    val res = if (str.contains(enclosure)) {
+      str.replaceAll(enclosure, enclosure + enclosure)
+    } else str
+    if(str.contains(delimeter)) {
+      enclosure + res + enclosure
+    } else res
   }
 }

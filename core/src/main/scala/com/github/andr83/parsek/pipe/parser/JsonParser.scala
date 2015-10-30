@@ -1,17 +1,17 @@
 package com.github.andr83.parsek.pipe.parser
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.pipe.ParserPipe
-import com.typesafe.config.{ConfigFactory, Config}
+import com.github.andr83.parsek.pipe.TransformPipe
+import com.typesafe.config.{Config, ConfigFactory}
 import org.json4s._
 import org.json4s.jackson.JsonMethods.{parse => jsonParse}
 
 /**
  * @author andr83
  */
-case class JsonParser(config: Config) extends ParserPipe(config) {
+case class JsonParser(config: Config) extends TransformPipe(config) {
 
-  def parse(raw: String): Option[PValue] = {
+  def transformString(raw: String): Option[PValue] = {
     val json = jsonParse(raw)
     Some(mapJson(json))
   }
