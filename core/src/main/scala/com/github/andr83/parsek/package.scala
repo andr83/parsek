@@ -4,6 +4,8 @@ package com.github.andr83
 import com.typesafe.config.{Config, ConfigObject, ConfigValue}
 import org.joda.time.DateTime
 
+import scala.language.implicitConversions
+
 /**
  * @author @andr83
  */
@@ -47,6 +49,9 @@ package object parsek {
     } else {
       None
     }
+
+    def getStringReq(path: String): String = getStringOpt(path)
+      .getOrElse(throw new IllegalStateException(s"Required field $path is not defined"))
 
     def getConfigOpt(path: String): Option[Config] = if (underlying.hasPath(path)) {
       Some(underlying.getConfig(path))

@@ -1,14 +1,12 @@
 package com.github.andr83.parsek.pipe.parser
 
 import com.github.andr83.parsek._
-import com.typesafe.config.{ConfigFactory, Config}
 import org.scalatest.{FlatSpec, Inside, Matchers}
 
 /**
  * @author andr83
  */
 class JsonParseTest extends FlatSpec with Matchers with Inside {
-  implicit val config = ConfigFactory.empty()
 
   "Json string" should "be parsed to PMap value" in {
     val json = PString(

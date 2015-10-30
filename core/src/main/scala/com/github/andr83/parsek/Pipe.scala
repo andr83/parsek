@@ -18,6 +18,7 @@ object Pipe {
     constructor.newInstance(config).asInstanceOf[Pipe]
   } else name match {
     case "parseJson" => JsonParser(config)
+    case "parseRegex" => RegexParser(config)
     case _ => throw new IllegalStateException(s"Unknown pipe $name")
   }
 }
