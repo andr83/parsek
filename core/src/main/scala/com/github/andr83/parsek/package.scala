@@ -32,6 +32,12 @@ package object parsek {
 
     import scala.collection.JavaConversions._
 
+    def getOpt(path: String): Option[AnyRef] = if (underlying.hasPath(path)) {
+      Some(underlying.getAnyRef(path))
+    } else {
+      None
+    }
+
     def getBooleanOpt(path: String): Option[Boolean] = if (underlying.hasPath(path)) {
       Some(underlying.getBoolean(path))
     } else {
