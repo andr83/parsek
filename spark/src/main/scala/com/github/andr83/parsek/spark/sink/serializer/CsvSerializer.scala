@@ -12,7 +12,7 @@ import scala.collection.JavaConversions._
  */
 class CsvSerializer(config:Config) extends Serializer(config) {
   var fields = config.getStringList("fields").toList
-  val delimeter = config.getStringOpt("delimiter").getOrElse(",")
+  val delimiter = config.getStringOpt("delimiter").getOrElse(",")
   val enclosure = config.getStringOpt("enclosure").getOrElse("\"")
   val listDelimiter = config.getStringOpt("listDelimiter").getOrElse("|")
   val mapFieldDelimiter = config.getStringOpt("mapFieldDelimiter").getOrElse(":")
@@ -26,11 +26,11 @@ class CsvSerializer(config:Config) extends Serializer(config) {
     case PMap(map) =>
       val res: Iterable[Option[String]] = for {
         field <- fields
-      } yield map.get(field).map(valueToString)
+      } yield map.getValue(field).map(valueToString)
       res map {
         case Some(str) => quoteAndEscape(str)
         case None => ""
-      } mkString delimeter map(_.toByte) toArray
+      } mkString delimiter map(_.toByte) toArray
     case _ => Array.empty[Byte]
   }
 
@@ -51,7 +51,7 @@ class CsvSerializer(config:Config) extends Serializer(config) {
     val res = if (str.contains(enclosure)) {
       str.replaceAll(enclosure, enclosure + enclosure)
     } else str
-    if(str.contains(delimeter)) {
+    if(str.contains(delimiter)) {
       enclosure + res + enclosure
     } else res
   }

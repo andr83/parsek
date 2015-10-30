@@ -1,7 +1,7 @@
 package com.github.andr83
 
 
-import com.typesafe.config.{Config, ConfigObject, ConfigValue}
+import com.typesafe.config.{Config, ConfigList, ConfigObject, ConfigValue}
 import org.joda.time.DateTime
 
 import scala.language.implicitConversions
@@ -68,6 +68,7 @@ package object parsek {
     def getObjectListOpt(path: String): Option[List[ConfigObject]] = if (underlying.hasPath(path)) {
       underlying getValue path match {
         case obj: ConfigObject => Some(List(obj))
+        case list: ConfigList => Some(list.toList.map(_.asInstanceOf[ConfigObject]))
         case list: List[_] => Some(list.map(_.asInstanceOf[ConfigObject]))
         case value => throw new IllegalStateException(s"Configuration error in path $path. Expected object actual $value")
       }

@@ -41,6 +41,21 @@ object PTime {
 
 final case class PMap(value: Map[String, PValue]) extends PValue {
   type valueType = Map[String, PValue]
+
+  def getValue(path: String): Option[PValue] = getValue(path.split('.'))
+
+  def getValue(path: Seq[String]): Option[PValue] = {
+    val head = path.head
+    val tail = path.tail
+    if (tail.isEmpty) {
+      value.value.get(head)
+    } else value.value.get(head) flatMap {
+      case map: PMap => map.getValue(tail)
+      case _ => throw new IllegalStateException(s"Failed extracting value from path $path in $value")
+    }
+  }
+
+  def updateValue(path: Seq[String], newValue: PValue): PMap = PMap.updateValue(this, path, newValue)
 }
 
 final case class PList(value: List[PValue]) extends PValue {
@@ -68,4 +83,16 @@ object PList {
 
 object PMap {
   def empty = PMap(Map.empty[String, PValue])
+
+  def updateValue(map: PMap, path: Seq[String], newValue: PValue): PMap = {
+    val head = path.head
+    val tail = path.tail
+    if (tail.isEmpty) {
+      PMap(map.value + (head -> newValue))
+    } else map.value.get(head) match {
+      case Some(v:PMap) => updateValue(v, tail, newValue)
+      case None => updateValue(PMap(map.value + (head -> PMap.empty)), tail, newValue)
+      case _ => throw new IllegalStateException(s"Can not update value in path $path in $map")
+    }
+  }
 }
