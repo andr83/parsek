@@ -15,7 +15,7 @@ class TextFileSink(config: Config) extends Sink(config) {
   val serializer = config.getConfigOpt("serializer")
 
   override def sink(rdd: RDD[PValue]): Unit = {
-    val out = serializer map(serializerConf => rdd.mapPartitions(it => {
+    val out = serializer map (serializerConf => rdd.mapPartitions(it => {
       val s = Serializer(serializerConf)
       it.map(v => new String(s.write(v).map(_.toChar)))
     }).filter(_.trim.nonEmpty)) getOrElse rdd

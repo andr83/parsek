@@ -28,6 +28,14 @@ package object parsek {
 
   implicit def listToPValue(value: List[PValue]): PList = PList(value)
 
+  implicit class RichString(val str: String) extends AnyVal {
+    def asBytes: Array[Byte] = str.map(_.toByte).toArray
+  }
+
+  implicit class RichByteArray(val arr: Array[Byte]) extends AnyVal {
+    def asStr: String = new String(arr.map(_.toChar))
+  }
+
   implicit class RichConfig(val underlying: Config) extends AnyVal {
 
     import scala.collection.JavaConversions._
@@ -91,5 +99,4 @@ package object parsek {
       None
     }
   }
-
 }

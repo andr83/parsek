@@ -6,7 +6,7 @@ import org.scalatest.{FlatSpec, Inside, Matchers}
 /**
  * @author andr83
  */
-class JsonParseTest extends FlatSpec with Matchers with Inside {
+class JsonParseSpec extends FlatSpec with Matchers with Inside {
 
   "Json string" should "be parsed to PMap value" in {
     val json = PString(

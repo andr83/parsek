@@ -1,7 +1,7 @@
 package com.github.andr83.parsek.spark
 
-import java.net.URI
 import java.io.File
+import java.net.URI
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -16,6 +16,7 @@ abstract class SparkJob {
   type PathPredicate = Path => Boolean
 
   implicit def toPath(path: String): Path = new Path(path)
+
   implicit def toFile(path: String): File = new File(path)
 
   lazy val optionParser = new scopt.OptionParser[Unit](getClass.getSimpleName) {

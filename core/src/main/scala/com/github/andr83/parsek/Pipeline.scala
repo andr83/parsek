@@ -1,6 +1,7 @@
 package com.github.andr83.parsek
 
-import com.typesafe.config.{ConfigFactory, ConfigObject}
+import com.typesafe.config.ConfigObject
+import scaldi.Injector
 
 import scala.collection.JavaConversions._
 
@@ -17,14 +18,14 @@ class Pipeline(pipes: Iterable[Pipe]) extends Serializable {
 }
 
 object Pipeline {
-  def apply(configs: Iterable[ConfigObject], defaultConfig: ConfigObject = ConfigFactory.empty()): Pipeline = {
+  def apply(configs: Iterable[ConfigObject])(implicit inj: Injector): Pipeline = {
     val pipes = configs map (config => {
       val map = config.unwrapped()
       if (map.size() != 1) {
         throw new IllegalStateException("Pipe config should contain only one element.")
       }
       val (key, _) = map.head
-      Pipe(key, defaultConfig.toConfig.withFallback(config.toConfig.getConfig(key)))
+      Pipe(key, config.toConfig.getConfig(key))
     })
     new Pipeline(pipes)
   }

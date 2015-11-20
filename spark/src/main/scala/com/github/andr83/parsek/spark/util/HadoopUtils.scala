@@ -1,6 +1,5 @@
 package com.github.andr83.parsek.spark.util
 
-import com.github.andr83.parsek.FileUtils
 import org.apache.commons.io.IOUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -12,7 +11,7 @@ import scala.io.Source
 /**
  * @author andr83
  */
-object HadoopUtils extends FileUtils {
+object HadoopUtils {
   def getCodec(name: String): Class[_ <: CompressionCodec] = name match {
     case "bzip2" => classOf[BZip2Codec]
     case "default" => classOf[DefaultCodec]
@@ -34,7 +33,7 @@ object HadoopUtils extends FileUtils {
     FileSystem.get(conf)
   }
 
-  def readString(path: String, fs: FileSystem = fs): String = if (path.startsWith("hdfs://")) {
+  def readString(path: String): String = if (path.startsWith("hdfs://")) {
     (for (
       in <- managed(fs.open(new Path(path)))
     ) yield IOUtils.toString(in)) either match {
@@ -43,7 +42,7 @@ object HadoopUtils extends FileUtils {
     }
   } else Source.fromFile(path).mkString
 
-  def readBytes(path: String, fs: FileSystem = fs): Array[Byte] = if (path.startsWith("hdfs://")) {
+  def readBytes(path: String): Array[Byte] = if (path.startsWith("hdfs://")) {
     (for (
       in <- managed(fs.open(new Path(path)))
     ) yield IOUtils.toByteArray(in)) either match {

@@ -5,6 +5,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.commons.io.IOUtils
 import org.apache.spark.rdd.RDD
 import resource._
+import scaldi.StaticModule
 
 /**
  * @author andr83
@@ -33,12 +34,26 @@ object ParsekJob extends SparkJob {
 
     val rdd: RDD[PValue] = sources.map(_(this)).reduce(_ ++ _)
 
-    val outRdd: RDD[PValue] = (config.getObjectListOpt("pipes") map (Pipeline(_)) map (pipeline => {
-      rdd.flatMap(pipeline.run).flatMap {
+//    val outRdd: RDD[PValue] = (config.getObjectListOpt("pipes") map (Pipeline(_)) map (pipeline => {
+//      rdd.flatMap(pipeline.run).flatMap {
+//        case PList(list) => list
+//        case value: PValue => List(value)
+//      }
+//    }) getOrElse rdd).cache()
+
+    val outRdd: RDD[PValue] = (config.getObjectListOpt("pipes") map (pipes => {
+      rdd mapPartitions(it => {
+        implicit val defaultInjector = new StaticModule {
+          val fileUtils = new FileUtils()
+        }
+        val pipeline = Pipeline(pipes)(defaultInjector)
+        it.flatMap(pipeline.run)
+      }) flatMap {
         case PList(list) => list
         case value: PValue => List(value)
       }
-    }) getOrElse rdd).cache()
+    }) getOrElse rdd) cache()
+
 
     val sinks = config.getConfigListOpt("sinks") map (_ map {
       case config: Config => Sink(config)

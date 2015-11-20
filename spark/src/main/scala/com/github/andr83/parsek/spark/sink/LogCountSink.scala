@@ -11,6 +11,7 @@ import org.apache.spark.rdd.RDD
  */
 class LogCountSink(config: Config) extends Sink(config) {
   val level = Level.toLevel(config.getStringOpt("level").getOrElse("info").toUpperCase)
+
   override def sink(rdd: RDD[PValue]): Unit = {
     val count = rdd.count().toString
     level match {

@@ -16,7 +16,7 @@ case class RegexParser(config: Config) extends TransformPipe(config) {
   val regex = config.getStringReq("pattern").r
   val namedGroups = RegexParser.getNamedGroups(regex)
 
-  override def transformString(raw: String): Option[PValue] = for (
+  override def transformString(raw: String, context: PMap = PMap.empty): Option[PValue] = for (
     m <- regex.findFirstMatchIn(raw)
     if m.groupCount > 0
   ) yield {

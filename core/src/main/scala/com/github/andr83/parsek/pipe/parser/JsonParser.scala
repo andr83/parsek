@@ -11,7 +11,7 @@ import org.json4s.jackson.JsonMethods.{parse => jsonParse}
  */
 case class JsonParser(config: Config) extends TransformPipe(config) {
 
-  def transformString(raw: String): Option[PValue] = {
+  def transformString(raw: String, context: PMap = PMap.empty): Option[PValue] = {
     val json = jsonParse(raw)
     Some(mapJson(json))
   }
