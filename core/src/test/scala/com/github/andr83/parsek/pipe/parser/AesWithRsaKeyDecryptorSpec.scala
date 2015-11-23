@@ -16,9 +16,11 @@ import scala.collection.JavaConversions._
  * @author andr83
  */
 class AesWithRsaKeyDecryptorSpec extends FlatSpec with Matchers with Inside {
+  implicit val context = new Context()
+
   // at first necessary convert RSA private key:
   // openssl pkcs8 -topk8 -inform PEM -outform DER -in private.pem -out private.der -nocrypt
-  "The content " should " be zipped Json string encoded with Base64 + AES" in {
+  "The content " should " be string encoded with AES key which encoded with RSA" in {
     val rawBody = RandomStringUtils.random(40, true, false)
     //Generating RSA private key
     val keyPairGenerator = KeyPairGenerator.getInstance("RSA")

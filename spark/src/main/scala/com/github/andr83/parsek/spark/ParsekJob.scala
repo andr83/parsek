@@ -5,7 +5,6 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.commons.io.IOUtils
 import org.apache.spark.rdd.RDD
 import resource._
-import scaldi.StaticModule
 
 /**
  * @author andr83
@@ -18,7 +17,7 @@ object ParsekJob extends SparkJob {
     config = if (path.startsWith("hdfs://")) {
       (for (
         in <- managed(fs.open(path))
-      ) yield IOUtils.toString(in)) either match {
+      ) yield IOUtils.toString(in)).either match {
         case Right(content) => ConfigFactory.parseString(content)
         case Left(errors) => throw errors.head
       }
@@ -43,10 +42,7 @@ object ParsekJob extends SparkJob {
 
     val outRdd: RDD[PValue] = (config.getObjectListOpt("pipes") map (pipes => {
       rdd mapPartitions(it => {
-        implicit val defaultInjector = new StaticModule {
-          val fileUtils = new FileUtils()
-        }
-        val pipeline = Pipeline(pipes)(defaultInjector)
+        val pipeline = Pipeline(pipes)
         it.flatMap(pipeline.run)
       }) flatMap {
         case PList(list) => list

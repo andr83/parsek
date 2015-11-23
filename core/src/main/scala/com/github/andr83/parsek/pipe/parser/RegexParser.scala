@@ -4,7 +4,7 @@ import java.lang.reflect.Method
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.pipe.TransformPipe
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.JavaConversions._
 import scala.util.matching.Regex
@@ -16,8 +16,8 @@ case class RegexParser(config: Config) extends TransformPipe(config) {
   val regex = config.getStringReq("pattern").r
   val namedGroups = RegexParser.getNamedGroups(regex)
 
-  override def transformString(raw: String, context: PMap = PMap.empty): Option[PValue] = for (
-    m <- regex.findFirstMatchIn(raw)
+  override def transformString(str: String)(implicit context: Context): Option[PValue] = for (
+    m <- regex.findFirstMatchIn(str)
     if m.groupCount > 0
   ) yield {
       val map = for (
@@ -37,4 +37,6 @@ object RegexParser {
       case _: Throwable => Map.empty[String, Int]
     }
   }
+
+  def apply(): RegexParser = RegexParser(ConfigFactory.empty())
 }

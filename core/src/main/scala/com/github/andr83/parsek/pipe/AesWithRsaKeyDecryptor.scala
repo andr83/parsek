@@ -25,9 +25,9 @@ case class AesWithRsaKeyDecryptor(config: Config) extends TransformPipe(config) 
 
   val aesKeyField = config.getStringReq("aesKeyField").split('.').toSeq
 
-  override def transformString(str: String, context: PMap = PMap.empty): Option[PValue] = {
+  override def transformString(str: String)(implicit context: Context): Option[PValue] = {
     for {
-      aesRsaKey <- context.getValue(aesKeyField)
+      aesRsaKey <- context.row.getValue(aesKeyField)
     } yield {
       val aesKey = decryptRsa(aesRsaKey.value.toString.asBytes).dropWhile(_ == 0)
       val body = decryptAes(aesKey.take(16), aesKey.takeRight(16), str.asBytes)
