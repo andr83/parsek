@@ -3,6 +3,7 @@ package com.github.andr83.parsek.spark.sink.serializer
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.spark.sink.Serializer
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 import org.joda.time.format.DateTimeFormat
 
 import scala.collection.JavaConversions._
@@ -12,13 +13,13 @@ import scala.collection.JavaConversions._
  */
 class CsvSerializer(config: Config) extends Serializer(config) {
   var fields = config.getStringList("fields").toList
-  val delimiter = config.getStringOpt("delimiter").getOrElse(",")
-  val enclosure = config.getStringOpt("enclosure").getOrElse("\"")
-  val listDelimiter = config.getStringOpt("listDelimiter").getOrElse("|")
-  val mapFieldDelimiter = config.getStringOpt("mapFieldDelimiter").getOrElse(":")
+  val delimiter = config.as[Option[String]]("delimiter").getOrElse(",")
+  val enclosure = config.as[Option[String]]("enclosure").getOrElse("\"")
+  val listDelimiter = config.as[Option[String]]("listDelimiter").getOrElse("|")
+  val mapFieldDelimiter = config.as[Option[String]]("mapFieldDelimiter").getOrElse(":")
 
   val timeFormatter = {
-    val format = config.getStringOpt("timeFormat").getOrElse("yyyy-MM-dd HH:mm:ss")
+    val format = config.as[Option[String]]("timeFormat").getOrElse("yyyy-MM-dd HH:mm:ss")
     DateTimeFormat.forPattern(format)
   }
 

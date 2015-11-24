@@ -3,6 +3,7 @@ package com.github.andr83.parsek.spark
 import com.github.andr83.parsek._
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.slf4j.LazyLogging
+import net.ceedubs.ficus.Ficus._
 import org.apache.spark.rdd.RDD
 
 /**
@@ -14,7 +15,7 @@ abstract class Sink(config: Config) extends LazyLogging {
 
 object Sink {
   def apply(config: Config): Sink = {
-    val sourceType = config.getStringOpt("type")
+    val sourceType = config.as[Option[String]]("type")
       .getOrElse(throw new IllegalStateException("Source config should have type property"))
     val className = if (sourceType.contains(".")) sourceType
     else

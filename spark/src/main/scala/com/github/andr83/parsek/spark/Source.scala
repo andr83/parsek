@@ -2,6 +2,7 @@ package com.github.andr83.parsek.spark
 
 import com.github.andr83.parsek._
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 import org.apache.spark.rdd.RDD
 
 /**
@@ -13,7 +14,7 @@ abstract class Source(config: Config) {
 
 object Source {
   def apply(config: Config): Source = {
-    val sourceType = config.getStringOpt("type")
+    val sourceType = config.as[Option[String]]("type")
       .getOrElse(throw new IllegalStateException("Source config should have type property"))
     val className = if (sourceType.contains(".")) sourceType
     else

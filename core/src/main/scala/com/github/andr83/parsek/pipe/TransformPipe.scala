@@ -2,13 +2,14 @@ package com.github.andr83.parsek.pipe
 
 import com.github.andr83.parsek._
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 
 /**
  * @author andr83
  */
 abstract class TransformPipe(config: Config) extends Pipe {
-  val field = config.getStringOpt("field") map (_.split('.').toSeq)
-  val asField = config.getStringOpt("as") map (_.split('.').toSeq) getOrElse field.getOrElse(Seq.empty[String])
+  val field = config.as[Option[String]]("field") map (_.split('.').toSeq)
+  val asField = config.as[Option[String]]("as") map (_.split('.').toSeq) getOrElse field.getOrElse(Seq.empty[String])
 
   override def run(value: PValue)(implicit context: Context): Option[PValue] = {
     value match {

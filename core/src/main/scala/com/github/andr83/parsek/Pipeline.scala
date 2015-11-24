@@ -1,6 +1,6 @@
 package com.github.andr83.parsek
 
-import com.typesafe.config.ConfigObject
+import com.typesafe.config._
 import com.typesafe.scalalogging.slf4j.LazyLogging
 
 import scala.collection.JavaConversions._
@@ -36,14 +36,21 @@ class Pipeline(pipes: Iterable[Pipe]) extends Serializable with LazyLogging {
 }
 
 object Pipeline {
-  def apply(configs: Iterable[ConfigObject]): Pipeline = {
-    val pipes = configs map (config => {
+  def apply(pipeConfigs: Iterable[ConfigObject]): Pipeline = {
+    val pipes = pipeConfigs map (config => {
       val map = config.unwrapped()
       if (map.size() != 1) {
         throw new IllegalStateException("Pipe config should contain only one element.")
       }
       val (key, _) = map.head
-      Pipe(key, config.toConfig.getConfig(key))
+      config.get(key) match {
+        case conf: Config => Pipe(key, conf)
+        case obj: ConfigObject => Pipe(key, obj.toConfig)
+        case field: ConfigValue if field.valueType() == ConfigValueType.STRING =>
+          val conf = ConfigFactory.parseMap(Map("field" -> field.unwrapped().toString))
+          Pipe(key, conf)
+        case _ => throw new IllegalStateException("Pipe config should be an object or string.")
+      }
     })
     new Pipeline(pipes)
   }

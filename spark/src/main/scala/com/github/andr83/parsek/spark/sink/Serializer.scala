@@ -2,6 +2,7 @@ package com.github.andr83.parsek.spark.sink
 
 import com.github.andr83.parsek._
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 
 /**
  * @author andr83
@@ -12,7 +13,7 @@ abstract class Serializer(config: Config) {
 
 object Serializer {
   def apply(config: Config): Serializer = {
-    val sType = config.getStringOpt("type")
+    val sType = config.as[Option[String]]("type")
       .getOrElse(throw new IllegalStateException("Serializer config should have type property"))
     val className = if (sType.contains(".")) sType
     else

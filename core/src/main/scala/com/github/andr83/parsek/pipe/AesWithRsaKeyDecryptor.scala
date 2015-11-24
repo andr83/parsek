@@ -7,13 +7,14 @@ import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 
 import com.github.andr83.parsek._
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 
 /**
  * @author andr83
  */
 case class AesWithRsaKeyDecryptor(config: Config) extends TransformPipe(config) {
   val privateKey = {
-    val rsaKeyBytes = config.getStringReq("privateKey").asBytes
+    val rsaKeyBytes = config.as[String]("privateKey").asBytes
 
     val spec = new PKCS8EncodedKeySpec(rsaKeyBytes)
     val kf = KeyFactory.getInstance("RSA")
@@ -23,7 +24,7 @@ case class AesWithRsaKeyDecryptor(config: Config) extends TransformPipe(config) 
   val cipher = Cipher.getInstance("RSA/ECB/NoPadding")
   cipher.init(Cipher.DECRYPT_MODE, privateKey)
 
-  val aesKeyField = config.getStringReq("aesKeyField").split('.').toSeq
+  val aesKeyField = config.as[String]("aesKeyField").split('.').toSeq
 
   override def transformString(str: String)(implicit context: Context): Option[PValue] = {
     for {

@@ -4,6 +4,7 @@ import com.github.andr83.parsek._
 import com.github.andr83.parsek.spark.Sink
 import com.github.andr83.parsek.spark.util.HadoopUtils
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 import org.apache.spark.rdd.RDD
 
 /**
@@ -11,8 +12,8 @@ import org.apache.spark.rdd.RDD
  */
 class TextFileSink(config: Config) extends Sink(config) {
   val path = config.getString("path")
-  val codec = config.getStringOpt("codec") map HadoopUtils.getCodec
-  val serializer = config.getConfigOpt("serializer")
+  val codec = config.as[Option[String]]("codec") map HadoopUtils.getCodec
+  val serializer = config.as[Option[Config]]("serializer")
 
   override def sink(rdd: RDD[PValue]): Unit = {
     val out = serializer map (serializerConf => rdd.mapPartitions(it => {

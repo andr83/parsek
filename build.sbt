@@ -24,7 +24,8 @@ lazy val commonSettings = Seq(
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers += Resolver.sonatypeRepo("releases"),
   externalResolvers := Seq(
-    "Maven Central Server" at "http://repo1.maven.org/maven2"
+    "Maven Central Server" at "http://repo1.maven.org/maven2",
+    "Sonatype OSS Releases"  at "http://oss.sonatype.org/content/repositories/releases/"
   ),
   assemblyMergeStrategy in assembly := {
     case PathList("javax", "servlet", xs@_*) => MergeStrategy.last
@@ -91,6 +92,7 @@ lazy val core = project
       "org.scaldi" % "scaldi_2.10" % "0.3.2",
       "javax.servlet" % "javax.servlet-api" % "3.0.1",
       "org.xerial.snappy" % "snappy-java" % "1.1.2",
+      "net.ceedubs" %% "ficus" % "1.0.1",
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ) ++ hadoopDependencies
   )

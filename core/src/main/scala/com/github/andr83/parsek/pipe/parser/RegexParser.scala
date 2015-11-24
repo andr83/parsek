@@ -5,6 +5,7 @@ import java.lang.reflect.Method
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.pipe.TransformPipe
 import com.typesafe.config.{Config, ConfigFactory}
+import net.ceedubs.ficus.Ficus._
 
 import scala.collection.JavaConversions._
 import scala.util.matching.Regex
@@ -13,7 +14,7 @@ import scala.util.matching.Regex
  * @author andr83
  */
 case class RegexParser(config: Config) extends TransformPipe(config) {
-  val regex = config.getStringReq("pattern").r
+  val regex = config.as[String]("pattern").r
   val namedGroups = RegexParser.getNamedGroups(regex)
 
   override def transformString(str: String)(implicit context: Context): Option[PValue] = for (
