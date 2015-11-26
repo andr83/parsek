@@ -35,97 +35,10 @@ package object parsek {
     def asStr: String = new String(arr.map(_.toChar))
   }
 
-//  implicit class RichConfig(val underlying: Config) extends AnyVal {
-//
-//    import scala.collection.JavaConversions._
-//
-//    def getOpt(path: String): Option[AnyRef] = if (underlying.hasPath(path)) {
-//      Some(underlying.getAnyRef(path))
-//    } else {
-//      None
-//    }
-//
-//    def getBooleanOpt(path: String): Option[Boolean] = if (underlying.hasPath(path)) {
-//      Some(underlying.getBoolean(path))
-//    } else {
-//      None
-//    }
-//
-//    def getStringOpt(path: String): Option[String] = if (underlying.hasPath(path)) {
-//      Some(underlying.getString(path))
-//    } else {
-//      None
-//    }
-//
-//    def getStringListOpt(path: String): Option[List[String]] = if (underlying.hasPath(path)) {
-//      Some(underlying.getStringList(path).toList)
-//    } else {
-//      None
-//    }
-//
-//    def getStringReq(path: String): String = getStringOpt(path)
-//      .getOrElse(throw new IllegalStateException(s"Required field $path is not defined"))
-//
-//    def getConfigOpt(path: String): Option[Config] = if (underlying.hasPath(path)) {
-//      Some(underlying.getConfig(path))
-//    } else {
-//      None
-//    }
-//
-//    def getConfigListOpt(path: String): Option[List[Config]] = if (underlying.hasPath(path)) {
-//      Some(underlying.getConfigList(path).toList)
-//    } else {
-//      None
-//    }
-//
-//    def getObjectListOpt(path: String): Option[List[ConfigObject]] = if (underlying.hasPath(path)) {
-//      underlying getValue path match {
-//        case obj: ConfigObject => Some(List(obj))
-//        case list: ConfigList => Some(list.toList.map(_.asInstanceOf[ConfigObject]))
-//        case list: List[_] => Some(list.map(_.asInstanceOf[ConfigObject]))
-//        case value => throw new IllegalStateException(s"Configuration error in path $path. Expected object actual $value")
-//      }
-//    } else {
-//      None
-//    }
-//
-//    def getMapOpt(path: String): Option[Map[String, ConfigValue]] = if (underlying.hasPath(path)) {
-//      val c = underlying.getConfig(path)
-//      Some(c.entrySet().map {
-//        case entry: java.util.Map.Entry[String, ConfigValue] => entry.getKey -> entry.getValue
-//      }.toMap)
-//    } else {
-//      None
-//    }
-//  }
-
-  case class IntCounter(var count: Int = 0) {
-    def +(inc: Int): IntCounter = {
+  case class IntCounter(var count: Int = 0) extends Serializable {
+    def +=(inc: Int): IntCounter = {
       count += inc
       this
     }
-    
-    def inc(): IntCounter = this + 1
-  }
-
-  class Context {
-    private var counters = Map.empty[(String, String), IntCounter]
-    var row = PMap.empty
-
-    def getCounters: Map[(String, String), IntCounter] = counters
-
-    def getCounter(groupName: String, name: String): IntCounter = {
-      val key = (groupName, name)
-      if (!counters.contains(key)) {
-        counters += key -> new IntCounter()
-      }
-      counters.get(key).get
-    }
-  }
-
-  object Context {
-    val ErrorGroup = "ERRORS"
-    val WarnGroup = "WARNS"
-    val InfoGroup = "INFO"
   }
 }

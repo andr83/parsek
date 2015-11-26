@@ -11,7 +11,7 @@ abstract class TransformPipe(config: Config) extends Pipe {
   val field = config.as[Option[String]]("field") map (_.split('.').toSeq)
   val asField = config.as[Option[String]]("as") map (_.split('.').toSeq) getOrElse field.getOrElse(Seq.empty[String])
 
-  override def run(value: PValue)(implicit context: Context): Option[PValue] = {
+  override def run(value: PValue)(implicit context: PipeContext): Option[PValue] = {
     value match {
       case map: PMap =>
         context.row = map
@@ -30,7 +30,7 @@ abstract class TransformPipe(config: Config) extends Pipe {
     })
   }
 
-  def transform(value: PValue, field: Option[Seq[String]] = None)(implicit context: Context): Option[PValue] = value match {
+  def transform(value: PValue, field: Option[Seq[String]] = None)(implicit context: PipeContext): Option[PValue] = value match {
     case PString(raw) if field.isEmpty => transformString(raw)
     case map: PMap if field.isDefined => map.getValue(field.get) flatMap (fieldValue => transform(fieldValue))
     case _ => throw new IllegalArgumentException(
@@ -38,5 +38,5 @@ abstract class TransformPipe(config: Config) extends Pipe {
     )
   }
 
-  def transformString(str: String)(implicit context: Context): Option[PValue]
+  def transformString(str: String)(implicit context: PipeContext): Option[PValue]
 }

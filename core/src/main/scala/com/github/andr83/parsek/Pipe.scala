@@ -1,7 +1,7 @@
 package com.github.andr83.parsek
 
+import com.github.andr83.parsek.pipe._
 import com.github.andr83.parsek.pipe.parser._
-import com.github.andr83.parsek.pipe.{AesWithRsaKeyDecryptor, Base64Decoder, GzipDecompressor}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.slf4j.LazyLogging
 
@@ -11,7 +11,7 @@ import com.typesafe.scalalogging.slf4j.LazyLogging
 trait Pipe extends LazyLogging with Serializable {
   val config: Config
 
-  def run(value: PValue)(implicit context: Context): Option[PValue]
+  def run(value: PValue)(implicit context: PipeContext): Option[PValue]
 }
 
 object Pipe {

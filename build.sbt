@@ -89,7 +89,6 @@ lazy val core = project
       "org.json4s" %% "json4s-jackson" % json4SVersion,
       "com.jsuereth" %% "scala-arm" % scalaArmVersion,
       "com.github.nscala-time" %% "nscala-time" % scalaTimeVersion,
-      "org.scaldi" % "scaldi_2.10" % "0.3.2",
       "javax.servlet" % "javax.servlet-api" % "3.0.1",
       "org.xerial.snappy" % "snappy-java" % "1.1.2",
       "net.ceedubs" %% "ficus" % "1.0.1",

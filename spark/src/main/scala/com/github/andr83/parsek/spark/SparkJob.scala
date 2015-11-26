@@ -3,16 +3,19 @@ package com.github.andr83.parsek.spark
 import java.io.File
 import java.net.URI
 
+import com.typesafe.scalalogging.slf4j.LazyLogging
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 import scopt.{OptionDef, Read}
 
+import scala.language.implicitConversions
+
 /**
  * @author andr83
  */
-abstract class SparkJob {
+abstract class SparkJob extends LazyLogging {
   type PathPredicate = Path => Boolean
 
   implicit def toPath(path: String): Path = new Path(path)

@@ -21,12 +21,12 @@ case class AesWithRsaKeyDecryptor(config: Config) extends TransformPipe(config) 
     kf.generatePrivate(spec)
   }
 
-  val cipher = Cipher.getInstance("RSA/ECB/NoPadding")
+  val cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding")
   cipher.init(Cipher.DECRYPT_MODE, privateKey)
 
   val aesKeyField = config.as[String]("aesKeyField").split('.').toSeq
 
-  override def transformString(str: String)(implicit context: Context): Option[PValue] = {
+  override def transformString(str: String)(implicit context: PipeContext): Option[PValue] = {
     for {
       aesRsaKey <- context.row.getValue(aesKeyField)
     } yield {

@@ -16,7 +16,7 @@ import scala.collection.JavaConversions._
  * @author andr83
  */
 class AesWithRsaKeyDecryptorSpec extends FlatSpec with Matchers with Inside {
-  implicit val context = new Context()
+  implicit val context = new PipeContext()
 
   // at first necessary convert RSA private key:
   // openssl pkcs8 -topk8 -inform PEM -outform DER -in private.pem -out private.der -nocrypt

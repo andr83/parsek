@@ -9,23 +9,22 @@ import scala.collection.JavaConversions._
  * @author andr83
  */
 class Pipeline(pipes: Iterable[Pipe]) extends Serializable with LazyLogging {
-  import Context._
-  implicit val context = new Context()
+  import PipeContext._
 
-  def run(value: PValue): Option[PValue] = {
+  def run(value: PValue)(implicit context: PipeContext): Option[PValue] = {
     try {
       nextPipe(pipes.iterator, value)
     } catch {
-      case e: Exception =>
+      case e: Throwable =>
         logger.error(e.toString, e)
-        context.getCounter(ErrorGroup, e.getClass.getSimpleName) inc()
+        context.getCounter(ErrorGroup, e.getClass.getSimpleName) += 1
         None
     } finally {
-      context.getCounter(InfoGroup, "LINES") inc()
+      context.getCounter(InfoGroup, "ROW_COUNT") += 1
     }
   }
 
-  private def nextPipe(it: Iterator[Pipe], value: PValue): Option[PValue] = if (it.hasNext) {
+  private def nextPipe(it: Iterator[Pipe], value: PValue)(implicit context: PipeContext): Option[PValue] = if (it.hasNext) {
     context.row = value match {
       case map: PMap => map
       case _ => PMap.empty

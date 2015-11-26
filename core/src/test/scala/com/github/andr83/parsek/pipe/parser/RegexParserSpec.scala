@@ -10,7 +10,7 @@ import scala.collection.JavaConversions._
  * @author andr83
  */
 class RegexParserSpec extends FlatSpec with Matchers with Inside {
-  implicit val context = new Context()
+  implicit val context = new PipeContext()
 
   val line = "2014-11-11 06:00:00, [191.247.226.134],[&imei=8a7edf8a47c923f21096fe51660d341b&os=Android&version=16]"
 
