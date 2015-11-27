@@ -1,7 +1,6 @@
 package com.github.andr83.parsek
 
 import com.github.andr83.parsek.pipe._
-import com.github.andr83.parsek.pipe.parser._
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.slf4j.LazyLogging
 
@@ -24,6 +23,7 @@ object Pipe {
     case "decodeBase64" => Base64Decoder(config)
     case "decryptAesWithRsa" => AesWithRsaKeyDecryptor(config)
     case "ungzip" => GzipDecompressor(config)
+    case "fields" => Fields(config)
     case _ => throw new IllegalStateException(s"Unknown pipe $name")
   }
 }

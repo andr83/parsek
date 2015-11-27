@@ -4,6 +4,7 @@ import com.typesafe.config._
 import com.typesafe.scalalogging.slf4j.LazyLogging
 
 import scala.collection.JavaConversions._
+import scala.util.control.NonFatal
 
 /**
  * @author andr83
@@ -15,7 +16,7 @@ class Pipeline(pipes: Iterable[Pipe]) extends Serializable with LazyLogging {
     try {
       nextPipe(pipes.iterator, value)
     } catch {
-      case e: Throwable =>
+      case NonFatal(e) =>
         logger.error(e.toString, e)
         context.getCounter(ErrorGroup, e.getClass.getSimpleName) += 1
         None
@@ -45,6 +46,7 @@ object Pipeline {
       config.get(key) match {
         case conf: Config => Pipe(key, conf)
         case obj: ConfigObject => Pipe(key, obj.toConfig)
+        case list: ConfigList => Pipe(key, ConfigFactory.parseMap(Map("config"->list.unwrapped())))
         case field: ConfigValue if field.valueType() == ConfigValueType.STRING =>
           val conf = ConfigFactory.parseMap(Map("field" -> field.unwrapped().toString))
           Pipe(key, conf)

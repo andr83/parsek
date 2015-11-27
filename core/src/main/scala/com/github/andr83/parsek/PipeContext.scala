@@ -22,4 +22,5 @@ object PipeContext {
   val ErrorGroup = "ERRORS"
   val WarnGroup = "WARNS"
   val InfoGroup = "INFO"
+  val EmptyField = "EMPTY_FIELD"
 }

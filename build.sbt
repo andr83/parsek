@@ -15,7 +15,7 @@ val scalaTimeVersion = "1.8.+"
 val scoptVersion = "3.3.+"
 val slf4jVersion = "1.7.+"
 val sparkVersion = "1.3.+"
-val typesafeConfigVersion = "1.3.+"
+val typesafeConfigVersion = "1.2.+"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
