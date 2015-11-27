@@ -1,6 +1,7 @@
 package com.github.andr83.parsek.pipe.parser
 
 import com.github.andr83.parsek._
+import com.github.andr83.parsek.pipe.JsonParser
 import org.scalatest.{FlatSpec, Inside, Matchers}
 
 /**

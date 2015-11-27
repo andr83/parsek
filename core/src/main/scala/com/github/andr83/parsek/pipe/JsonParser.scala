@@ -1,7 +1,6 @@
-package com.github.andr83.parsek.pipe.parser
+package com.github.andr83.parsek.pipe
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.pipe.TransformPipe
 import com.typesafe.config.{Config, ConfigFactory}
 import org.json4s._
 import org.json4s.jackson.JsonMethods.{parse => jsonParse}

@@ -1,9 +1,8 @@
-package com.github.andr83.parsek.pipe.parser
+package com.github.andr83.parsek.pipe
 
 import java.lang.reflect.Method
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.pipe.TransformPipe
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
