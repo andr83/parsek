@@ -18,7 +18,11 @@ class Pipeline(pipes: Iterable[Pipe]) extends Serializable with LazyLogging {
     } catch {
       case NonFatal(e) =>
         logger.error(e.toString, e)
-        context.getCounter(ErrorGroup, e.getClass.getSimpleName) += 1
+        if (context.path.isEmpty) {
+          context.getCounter(ErrorGroup, e.getClass.getSimpleName) += 1
+        } else {
+          context.getCounter(ErrorGroup, (e.getClass.getSimpleName, context.path.mkString(".")).toString()) += 1
+        }
         None
     } finally {
       context.getCounter(InfoGroup, "ROW_COUNT") += 1
@@ -26,6 +30,7 @@ class Pipeline(pipes: Iterable[Pipe]) extends Serializable with LazyLogging {
   }
 
   private def nextPipe(it: Iterator[Pipe], value: PValue)(implicit context: PipeContext): Option[PValue] = if (it.hasNext) {
+    context.path = Seq.empty[String]
     context.row = value match {
       case map: PMap => map
       case _ => PMap.empty

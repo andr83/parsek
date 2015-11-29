@@ -1,7 +1,7 @@
 package com.github.andr83.parsek.meta
 
 import com.github.andr83.parsek._
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ConfigException, Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
 
@@ -40,7 +40,8 @@ case class FieldIsEmpty(msg: String) extends ValidationError
 case class PatternNotMatched(msg: String) extends ValidationError
 
 case class StringField(
-  name: String, pattern: Option[Regex],
+  name: String,
+  pattern: Option[Regex],
   stringCase: Option[StringCase]
 ) extends Field[PString] {
   override def validate(value: PValue)
@@ -132,16 +133,29 @@ object Field {
   def apply(config: Config): FieldType = {
     import net.ceedubs.ficus.readers.ArbitraryTypeReader._
     config.as[String]("type") match {
-      //      case "String" => fakeConfig(config).as[StringField]("fakeRoot")
+      case "String" => fakeConfig(config).as[StringField]("fakeRoot")
       case "Int" => fakeConfig(config).as[IntField]("fakeRoot")
       case "Long" => fakeConfig(config).as[LongField]("fakeRoot")
       case "Map" => fakeConfig(config).as[MapField]("fakeRoot")
     }
   }
 
-  implicit val fieldConfigReader: ValueReader[FieldType] = ValueReader.relative(config => {
+  implicit val fieldConfigReader: ValueReader[FieldType] = ValueReader.relative(config=> {
     Field.apply(config)
   })
+
+  implicit val regexReader: ValueReader[Regex] = new ValueReader[Regex] {
+    def read(config: Config, path: String): Regex = config.getString(path).r
+  }
+
+  implicit val stringCaseReader: ValueReader[StringCase] = new ValueReader[StringCase] {
+    def read(config: Config, path: String): StringCase = config.getString(path).toLowerCase match {
+      case "lower" => LowerCase
+      case "upper" => UpperCase
+      case _ =>
+        throw new ConfigException.BadValue(config.origin(), path, "String case can be only \"upper\" or \"lower\"")
+    }
+  }
 
   def fakeConfig(config: Config): Config = ConfigFactory.parseMap(Map("fakeRoot" -> config.root().unwrapped()))
 }

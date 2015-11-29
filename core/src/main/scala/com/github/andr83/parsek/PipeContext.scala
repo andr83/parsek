@@ -6,6 +6,7 @@ package com.github.andr83.parsek
 class PipeContext extends Serializable {
   protected var counters = Map.empty[(String, String), IntCounter]
   var row = PMap.empty
+  var path = Seq.empty[String]
 
   def getCounters: Map[(String, String), Int] = counters.mapValues(_.count)
 

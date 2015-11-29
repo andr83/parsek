@@ -17,6 +17,7 @@ abstract class TransformPipe(config: Config) extends Pipe {
         context.row = map
       case _ =>
     }
+    context.path = field.getOrElse(Seq.empty[String])
 
     val res = transform(value, field)
     if (asField.isEmpty) {

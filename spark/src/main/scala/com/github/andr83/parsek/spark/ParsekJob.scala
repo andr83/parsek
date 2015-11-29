@@ -49,6 +49,7 @@ object ParsekJob extends SparkJob {
   }
 
   override def job(): Unit = {
+    val startTime = System.currentTimeMillis()
     val sources = config.as[List[Config]]("sources") map Source.apply
     val rdd: RDD[PValue] = sources.map(_(this)).reduce(_ ++ _)
 
@@ -66,8 +67,9 @@ object ParsekJob extends SparkJob {
     val sinks = config.as[List[Config]]("sinks") map Sink.apply
     sinks.foreach(_.sink(outRdd))
 
+    logger.info(s"Duration: ${System.currentTimeMillis() - startTime}ms")
     logger.info("Counters:")
-    context.getCounters foreach{case(key, count)=>
+    context.getCounters.toSeq.sortWith(_._1.toString() < _._1.toString()) foreach{case(key, count)=>
       logger.info(s"$key: $count")
     }
   }
