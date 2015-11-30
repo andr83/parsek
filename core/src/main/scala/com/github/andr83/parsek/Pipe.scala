@@ -25,6 +25,7 @@ object Pipe {
     case "decryptDynamicAes" => DynamicAesDecryptor(config)
     case "ungzip" => GzipDecompressor(config)
     case "fields" => Fields(config)
+    case "flatten" => Flatten(config)
     case _ => throw new IllegalStateException(s"Unknown pipe $name")
   }
 }

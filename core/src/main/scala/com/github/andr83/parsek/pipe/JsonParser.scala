@@ -19,7 +19,7 @@ case class JsonParser(config: Config) extends TransformPipe(config) {
     case JString(s) => PString(s)
     case JDouble(num) => PDouble(num)
     case JDecimal(num) => PDouble(num.toDouble)
-    case JInt(num) => PInt(num.toInt)
+    case JInt(num) => PLong(num.toLong)
     case JLong(num) => PLong(num)
     case JBool(b) => PBool(b)
     case JObject(fields) =>

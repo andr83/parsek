@@ -20,6 +20,7 @@ import scala.util.{Failure, Success, Try}
 
 sealed trait Field[T <: PValue] {
   val name: String
+  var as: Option[String] = None
   var isRequired: Boolean = false
 
   def validate(value: PValue)(implicit errors: mutable.Buffer[FieldError]): Option[T]
@@ -168,7 +169,7 @@ case class MapField(
       val res = fields.get flatMap (f => map.get(f.name) match {
         case Some(v) =>
           Try(f.validate(v)) match {
-            case Success(Some(validated)) => Some(f.name -> validated)
+            case Success(Some(validated)) => Some(f.as.getOrElse(f.name) -> validated)
             case Success(None) =>
               checkIfRequired(f, FieldIsEmpty(s"Field ${f.name} is empty in $value"))
               None
@@ -203,7 +204,10 @@ case class ListField(
       (implicit errors: mutable.Buffer[FieldError]): Option[PList] = value match {
     case PList(list) =>
       val res = field map (f => list.flatMap(v => f.validate(v))) getOrElse list
-      if (res.isEmpty) None else Some(PList(res))
+      if (res.isEmpty) None else as match {
+        case Some(asField) => Some(PList(res.map(v=>PMap(Map(asField->v)))))
+        case None => Some(PList(res))
+      }
     case _ => throw IllegalValueType(s"Field $name expect list value type but got $value")
   }
 }
@@ -212,7 +216,7 @@ object Field {
 
   def apply(config: Config): FieldType = {
     import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-    config.as[String]("type") match {
+    val field = config.as[String]("type") match {
       case "String" => fakeConfig(config).as[StringField]("fakeRoot")
       case "Int" => fakeConfig(config).as[IntField]("fakeRoot")
       case "Long" => fakeConfig(config).as[LongField]("fakeRoot")
@@ -223,7 +227,18 @@ object Field {
       case "Map" => fakeConfig(config).as[MapField]("fakeRoot")
       case "List" => fakeConfig(config).as[ListField]("fakeRoot")
     }
+
+    field.as = config.as[Option[String]]("as")
+    field.isRequired = config.as[Option[Boolean]]("isRequired").getOrElse(false)
+    field.isRequired = isRequired(field)
+    field
   }
+
+  def isRequired(field: FieldType): Boolean = field.isRequired || (field match {
+    case mf: MapField if mf.fields.isDefined => mf.fields.get exists isRequired
+    case lf: ListField if lf.field.isDefined => isRequired(lf.field.get)
+    case _ => false
+  })
 
   implicit val fieldConfigReader: ValueReader[FieldType] = ValueReader.relative(config => {
     Field.apply(config)

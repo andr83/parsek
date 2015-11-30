@@ -12,9 +12,11 @@ import scala.util.control.NonFatal
 class Pipeline(pipes: Iterable[Pipe]) extends Serializable with LazyLogging {
   import PipeContext._
 
-  def run(value: PValue)(implicit context: PipeContext): Option[PValue] = {
+  def run(value: PValue)(implicit context: PipeContext): List[PValue] = {
     try {
-      nextPipe(pipes.iterator, value)
+      val res = nextPipe(pipes.iterator, value)
+      context.getCounter(InfoGroup, "OUTPUT_ROWS") += res.length
+      res
     } catch {
       case NonFatal(e) =>
         logger.error(e.toString, e)
@@ -23,21 +25,27 @@ class Pipeline(pipes: Iterable[Pipe]) extends Serializable with LazyLogging {
         } else {
           context.getCounter(ErrorGroup, (e.getClass.getSimpleName, context.path.mkString(".")).toString()) += 1
         }
-        None
+        List()
     } finally {
-      context.getCounter(InfoGroup, "ROW_COUNT") += 1
+      context.getCounter(InfoGroup, "INPUT_ROWS") += 1
     }
   }
 
-  private def nextPipe(it: Iterator[Pipe], value: PValue)(implicit context: PipeContext): Option[PValue] = if (it.hasNext) {
+  private def nextPipe(it: Iterator[Pipe], value: PValue)(implicit context: PipeContext): List[PValue] = if (it.hasNext) {
     context.path = Seq.empty[String]
     context.row = value match {
       case map: PMap => map
       case _ => PMap.empty
     }
     val pipe = it.next()
-    pipe.run(value) flatMap (res => nextPipe(it, res))
-  } else Some(value)
+    pipe.run(value) map {
+      case PList(list) => list flatMap(nextPipe(it, _))
+      case pipeResult => nextPipe(it, pipeResult)
+    } getOrElse List.empty[PValue]
+  } else value match {
+    case PList(list) => list
+    case _ => List(value)
+  }
 }
 
 object Pipeline {
