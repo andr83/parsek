@@ -15,7 +15,7 @@ package object parsek {
 
   implicit def longToPValue(value: Long): PLong = PLong(value)
 
-  implicit def timeToPValue(value: DateTime): PTime = PTime(value)
+  implicit def timeToPValue(value: DateTime): PDate = PDate(value)
 
   implicit def floatToPValue(value: Float): PDouble = PDouble(value)
 

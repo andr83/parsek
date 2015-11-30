@@ -7,6 +7,7 @@ import net.ceedubs.ficus.Ficus._
 import org.joda.time.format.DateTimeFormat
 
 import scala.collection.JavaConversions._
+import scala.language.postfixOps
 
 /**
  * @author andr83
@@ -40,8 +41,8 @@ class CsvSerializer(config: Config) extends Serializer(config) {
     case PInt(num) => num.toString
     case PLong(num) => num.toString
     case PDouble(num) => num.toString
-    case PBool(b) => if (b) "1" else "0"
-    case PTime(time) => time.toString(timeFormatter)
+    case PBool(b) => if (b) "true" else "false"
+    case PDate(time) => time.toString(timeFormatter)
     case PList(list) => list.map(valueToString) mkString listDelimiter
     case PMap(map) => map mapValues valueToString map {
       case (k, v) => k + mapFieldDelimiter + v

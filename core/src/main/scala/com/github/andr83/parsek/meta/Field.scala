@@ -1,9 +1,13 @@
 package com.github.andr83.parsek.meta
 
+import java.util.Locale
+
 import com.github.andr83.parsek._
-import com.typesafe.config.{ConfigException, Config, ConfigFactory}
+import com.github.nscala_time.time.Imports._
+import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
+import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -89,6 +93,69 @@ case class LongField(
   })
 }
 
+case class DoubleField(
+  name: String
+) extends Field[PDouble] {
+  override def validate(value: PValue)
+      (implicit errors: mutable.Buffer[FieldError]): Option[PDouble] = Some(value match {
+    case v: PDouble => v
+    case PInt(num) => num.toDouble
+    case PLong(num) => num.toDouble
+    case PString(str) => str.toDouble
+    case _ => throw IllegalValueType(s"Field $name expect double value type but got $value")
+  })
+}
+
+case class BooleanField(
+  name: String
+) extends Field[PBool] {
+  override def validate(value: PValue)
+      (implicit errors: mutable.Buffer[FieldError]): Option[PBool] = Some(value match {
+    case v: PBool => v
+    case PInt(num) if Seq(0, 1).contains(num) => num == 1
+    case PLong(num) if Seq(0, 1).contains(num) => num == 1
+    case PString(str) => str.toBoolean
+    case _ => throw IllegalValueType(s"Field $name expect double value type but got $value")
+  })
+}
+
+case class DateField(
+  name: String,
+  pattern: DateTimeFormatter,
+  toTimeZone: Option[DateTimeZone] = None
+) extends Field[PDate] {
+  override def validate(value: PValue)
+      (implicit errors: mutable.Buffer[FieldError]): Option[PDate] = Some(value match {
+    case v: PDate => v
+    case PString(str) =>
+      val dt = pattern.parseDateTime(str)
+      val res = toTimeZone map (tz => dt.toDateTime(tz)) getOrElse dt
+      res
+    case _ => throw IllegalValueType(s"Field $name expect date value type but got $value")
+  })
+}
+
+case class TimestampField(
+  name: String,
+  timeZone: Option[DateTimeZone]
+) extends Field[PDate] {
+  override def validate(value: PValue)
+      (implicit errors: mutable.Buffer[FieldError]): Option[PDate] = Some(value match {
+    case v: PDate => v
+    case PInt(num) => parse(num * 1000L)
+    case PLong(num) => parse(if (num >= 100000000000L) num else num * 1000)
+    case PString(str) =>
+      val num = str.toLong
+      parse(if (num >= 100000000000L) num else num * 1000)
+    case _ => throw IllegalValueType(s"Field $name expect date value type but got $value")
+  })
+
+  def parse(ts: Long): DateTime = {
+    val dt = new DateTime(ts)
+    timeZone map (tz => dt.toDateTime(tz)) getOrElse dt
+  }
+}
+
 case class MapField(
   name: String,
   fields: Option[Seq[FieldType]]
@@ -128,6 +195,19 @@ case class MapField(
   }
 }
 
+case class ListField(
+  name: String,
+  field: Option[FieldType]
+) extends Field[PList] {
+  override def validate(value: PValue)
+      (implicit errors: mutable.Buffer[FieldError]): Option[PList] = value match {
+    case PList(list) =>
+      val res = field map (f => list.flatMap(v => f.validate(v))) getOrElse list
+      if (res.isEmpty) None else Some(PList(res))
+    case _ => throw IllegalValueType(s"Field $name expect list value type but got $value")
+  }
+}
+
 object Field {
 
   def apply(config: Config): FieldType = {
@@ -136,12 +216,28 @@ object Field {
       case "String" => fakeConfig(config).as[StringField]("fakeRoot")
       case "Int" => fakeConfig(config).as[IntField]("fakeRoot")
       case "Long" => fakeConfig(config).as[LongField]("fakeRoot")
+      case "Double" => fakeConfig(config).as[DoubleField]("fakeRoot")
+      case "Boolean" => fakeConfig(config).as[BooleanField]("fakeRoot")
+      case "Date" => fakeConfig(config).as[DateField]("fakeRoot")
+      case "Timestamp" => fakeConfig(config).as[TimestampField]("fakeRoot")
       case "Map" => fakeConfig(config).as[MapField]("fakeRoot")
+      case "List" => fakeConfig(config).as[ListField]("fakeRoot")
     }
   }
 
-  implicit val fieldConfigReader: ValueReader[FieldType] = ValueReader.relative(config=> {
+  implicit val fieldConfigReader: ValueReader[FieldType] = ValueReader.relative(config => {
     Field.apply(config)
+  })
+
+  implicit val dateConfigReader: ValueReader[DateField] = ValueReader.relative(config => {
+    val timeZone = config.as[Option[DateTimeZone]]("timeZone")
+    val pattern = (config.as[Option[String]]("format")
+      .map(fmt=> DateTimeFormat.forPattern(fmt)) getOrElse ISODateTimeFormat.dateTime()).withLocale(Locale.ENGLISH)
+    DateField(
+      name = config.as[String]("name"),
+      pattern = timeZone map (tz => pattern.withZone(tz)) getOrElse pattern,
+      toTimeZone = config.as[Option[DateTimeZone]]("toTimeZone")
+    )
   })
 
   implicit val regexReader: ValueReader[Regex] = new ValueReader[Regex] {
@@ -155,6 +251,10 @@ object Field {
       case _ =>
         throw new ConfigException.BadValue(config.origin(), path, "String case can be only \"upper\" or \"lower\"")
     }
+  }
+
+  implicit val timeZoneReader: ValueReader[DateTimeZone] = new ValueReader[DateTimeZone] {
+    def read(config: Config, path: String): DateTimeZone = DateTimeZone.forID(config.getString(path))
   }
 
   def fakeConfig(config: Config): Config = ConfigFactory.parseMap(Map("fakeRoot" -> config.root().unwrapped()))

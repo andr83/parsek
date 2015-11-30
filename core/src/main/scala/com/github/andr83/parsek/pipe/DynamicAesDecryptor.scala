@@ -28,6 +28,7 @@ case class DynamicAesDecryptor(config: Config) extends TransformPipe(config) {
             encipher.init(Cipher.DECRYPT_MODE, secretKey)
         }
         encipher.doFinal(str.dropWhile(_ == 0).asBytes).asStr
+      case value => throw new IllegalStateException(s"Aes key must be a string but $value given")
     }
   }
 }

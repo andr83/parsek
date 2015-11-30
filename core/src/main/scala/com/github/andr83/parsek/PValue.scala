@@ -31,12 +31,12 @@ final case class PBool(value: Boolean) extends PValue {
   override type valueType = Boolean
 }
 
-final case class PTime(value: DateTime) extends PValue {
+final case class PDate(value: DateTime) extends PValue {
   override type valueType = DateTime
 }
 
-object PTime {
-  def apply(time: Long): PTime = PTime(new DateTime(time))
+object PDate {
+  def apply(time: Long): PDate = PDate(new DateTime(time))
 }
 
 final case class PMap(value: Map[String, PValue]) extends PValue {
@@ -71,7 +71,7 @@ object PValue {
     case v: Long => PLong(v)
     case v: Float => PDouble(v)
     case v: Double => PDouble(v)
-    case v: DateTime => PTime(v)
+    case v: DateTime => PDate(v)
     case v: PValue => v
     case v => throw new IllegalArgumentException("Unsupported argument type: " + v.getClass.getName)
   }
