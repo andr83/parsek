@@ -4,7 +4,7 @@ import com.github.andr83.parsek._
 import com.github.andr83.parsek.spark.sink.Serializer
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
-import org.joda.time.format.DateTimeFormat
+import org.joda.time.format.{DateTimeFormat, ISODateTimeFormat}
 
 import scala.collection.JavaConversions._
 import scala.language.postfixOps
@@ -19,10 +19,9 @@ class CsvSerializer(config: Config) extends Serializer(config) {
   val listDelimiter = config.as[Option[String]]("listDelimiter").getOrElse("|")
   val mapFieldDelimiter = config.as[Option[String]]("mapFieldDelimiter").getOrElse(":")
 
-  val timeFormatter = {
-    val format = config.as[Option[String]]("timeFormat").getOrElse("yyyy-MM-dd HH:mm:ss")
-    DateTimeFormat.forPattern(format)
-  }
+  val timeFormatter = config.as[Option[String]]("timeFormat")
+    .map(DateTimeFormat.forPattern)
+    .getOrElse(ISODateTimeFormat.dateTime())
 
   override def write(value: PValue): Array[Byte] = value match {
     case PMap(map) =>
