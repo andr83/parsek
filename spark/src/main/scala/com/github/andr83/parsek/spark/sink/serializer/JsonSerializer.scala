@@ -4,7 +4,6 @@ import com.github.andr83.parsek._
 import com.github.andr83.parsek.spark.sink.Serializer
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
-import org.joda.time.format.{DateTimeFormat, ISODateTimeFormat}
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
@@ -13,9 +12,8 @@ import org.json4s.jackson.JsonMethods._
  */
 class JsonSerializer(config: Config) extends Serializer(config) {
   val fields = config.as[Option[List[String]]]("fields")
-  val timeFormatter = config.as[Option[String]]("timeFormat")
-    .map(DateTimeFormat.forPattern)
-    .getOrElse(ISODateTimeFormat.dateTime())
+
+  val timeFormatter = DateFormatter(config.as[Option[String]]("timeFormat"))
 
   override def write(value: PValue): Array[Byte] = fields match {
     case Some(fs) =>
@@ -30,7 +28,7 @@ class JsonSerializer(config: Config) extends Serializer(config) {
     case PLong(num) => JLong(num)
     case PDouble(num) => JDouble(num)
     case PBool(num) => JBool(num)
-    case PDate(date) => JString(date.toString(timeFormatter))
+    case PDate(date) => convertToJson(timeFormatter.format(date))
     case PList(list) => JArray(list.map(convertToJson))
     case PMap(map) => JObject(map.mapValues(convertToJson).toList)
   }

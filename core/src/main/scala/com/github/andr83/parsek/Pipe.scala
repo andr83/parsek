@@ -8,8 +8,6 @@ import com.typesafe.scalalogging.slf4j.LazyLogging
  * @author andr83
  */
 trait Pipe extends LazyLogging with Serializable {
-  val config: Config
-
   def run(value: PValue)(implicit context: PipeContext): Option[PValue]
 }
 
@@ -19,6 +17,7 @@ object Pipe {
     constructor.newInstance(config).asInstanceOf[Pipe]
   } else name match {
     case "parseJson" => JsonParser(config)
+    case "parseCsv" => CsvParser(config)
     case "parseRegex" => RegexParser(config)
     case "decodeBase64" => Base64Decoder(config)
     case "decryptRsa" => RsaDecryptor(config)

@@ -6,7 +6,7 @@ val hadoopVersion = "2.3.+"
 val jacksonCoreVersion = "2.4.4"
 val jacksonVersion = "2.6.1"
 val json4SVersion = "3.3.+"
-val openCsvVersion = "2.3"
+val openCsvVersion = "3.4"
 val playJsonVersion = "2.4.3"
 val scalaArmVersion = "1.4"
 val scalaLoggingVersion = "2.1.2"
@@ -87,6 +87,7 @@ lazy val core = project
       "com.typesafe.scala-logging" %% "scala-logging-slf4j" % scalaLoggingVersion,
       "org.json4s" %% "json4s-native" % json4SVersion,
       "org.json4s" %% "json4s-jackson" % json4SVersion,
+      "com.opencsv" % "opencsv" % openCsvVersion,
       "com.jsuereth" %% "scala-arm" % scalaArmVersion,
       "com.github.nscala-time" %% "nscala-time" % scalaTimeVersion,
       "javax.servlet" % "javax.servlet-api" % "3.0.1",

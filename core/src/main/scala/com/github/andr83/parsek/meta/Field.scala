@@ -1,13 +1,10 @@
 package com.github.andr83.parsek.meta
 
-import java.util.Locale
-
 import com.github.andr83.parsek._
 import com.github.nscala_time.time.Imports._
-import com.typesafe.config.{Config, ConfigException, ConfigFactory}
+import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
-import net.ceedubs.ficus.readers.ValueReader
-import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat}
+import org.joda.time.format.DateTimeFormatter
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -46,8 +43,8 @@ case class PatternNotMatched(msg: String) extends ValidationError
 
 case class StringField(
   name: String,
-  pattern: Option[Regex],
-  stringCase: Option[StringCase]
+  pattern: Option[Regex] = None,
+  stringCase: Option[StringCase] = None
 ) extends Field[PString] {
   override def validate(value: PValue)
       (implicit errors: mutable.Buffer[FieldError]): Option[PString] = {
@@ -239,38 +236,6 @@ object Field {
     case lf: ListField if lf.field.isDefined => isRequired(lf.field.get)
     case _ => false
   })
-
-  implicit val fieldConfigReader: ValueReader[FieldType] = ValueReader.relative(config => {
-    Field.apply(config)
-  })
-
-  implicit val dateConfigReader: ValueReader[DateField] = ValueReader.relative(config => {
-    val timeZone = config.as[Option[DateTimeZone]]("timeZone")
-    val pattern = (config.as[Option[String]]("format")
-      .map(fmt=> DateTimeFormat.forPattern(fmt)) getOrElse ISODateTimeFormat.dateTime()).withLocale(Locale.ENGLISH)
-    DateField(
-      name = config.as[String]("name"),
-      pattern = timeZone map (tz => pattern.withZone(tz)) getOrElse pattern,
-      toTimeZone = config.as[Option[DateTimeZone]]("toTimeZone")
-    )
-  })
-
-  implicit val regexReader: ValueReader[Regex] = new ValueReader[Regex] {
-    def read(config: Config, path: String): Regex = config.getString(path).r
-  }
-
-  implicit val stringCaseReader: ValueReader[StringCase] = new ValueReader[StringCase] {
-    def read(config: Config, path: String): StringCase = config.getString(path).toLowerCase match {
-      case "lower" => LowerCase
-      case "upper" => UpperCase
-      case _ =>
-        throw new ConfigException.BadValue(config.origin(), path, "String case can be only \"upper\" or \"lower\"")
-    }
-  }
-
-  implicit val timeZoneReader: ValueReader[DateTimeZone] = new ValueReader[DateTimeZone] {
-    def read(config: Config, path: String): DateTimeZone = DateTimeZone.forID(config.getString(path))
-  }
 
   def fakeConfig(config: Config): Config = ConfigFactory.parseMap(Map("fakeRoot" -> config.root().unwrapped()))
 }
