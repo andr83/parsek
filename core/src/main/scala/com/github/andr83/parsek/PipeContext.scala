@@ -1,13 +1,13 @@
 package com.github.andr83.parsek
 
-import com.github.andr83.parsek.meta.MapField
+import com.github.andr83.parsek.meta.RecordField
 
 /**
  * @author nik
  */
 class PipeContext extends Serializable {
   protected var counters = Map.empty[(String, String), IntCounter]
-  var schema: Option[MapField] = None
+  var schema: Option[RecordField] = None
   var row = PMap.empty
   var path = Seq.empty[String]
 

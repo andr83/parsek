@@ -20,6 +20,8 @@ sealed trait Field[T <: PValue] {
   var as: Option[String] = None
   var isRequired: Boolean = false
 
+  def writeName: String = as.getOrElse(name)
+
   def validate(value: PValue)(implicit errors: mutable.Buffer[FieldError]): Option[T]
 }
 
@@ -154,16 +156,16 @@ case class TimestampField(
   }
 }
 
-case class MapField(
+case class RecordField(
   name: String,
-  fields: Option[Seq[FieldType]]
+  fields: Seq[FieldType]
 ) extends Field[PMap] {
-  isRequired = isRequired || fields.exists(_.exists(_.isRequired))
+  isRequired = isRequired || fields.exists(_.isRequired)
 
   override def validate(value: PValue)
       (implicit errors: mutable.Buffer[FieldError]): Option[PMap] = value match {
-    case PMap(map) if fields.isDefined =>
-      val res = fields.get flatMap (f => map.get(f.name) match {
+    case PMap(map) =>
+      val res = fields flatMap (f => map.get(f.name) match {
         case Some(v) =>
           Try(f.validate(v)) match {
             case Success(Some(validated)) => Some(f.as.getOrElse(f.name) -> validated)
@@ -180,7 +182,6 @@ case class MapField(
           None
       })
       if (res.isEmpty) None else Some(res.toMap)
-    case map: PMap => Some(map)
     case _ => throw IllegalValueType(s"Field $name expect map value type but got $value")
   }
 
@@ -190,6 +191,19 @@ case class MapField(
       throw RequiredFieldError(f, ex)
     }
     errors += ((f, ex))
+  }
+}
+
+case class MapField(
+  name: String,
+  field: Option[FieldType]
+) extends Field[PMap] {
+  override def validate(value: PValue)
+      (implicit errors: mutable.Buffer[FieldError]): Option[PMap] = value match {
+    case PMap(map) =>
+      val res = field map (f => map.flatMap{case (k,v) => f.validate(v).map(k->_)}) getOrElse map
+      if (res.isEmpty) None else Some(res)
+    case _ => throw IllegalValueType(s"Field $name expect map value type but got $value")
   }
 }
 
@@ -221,6 +235,7 @@ object Field {
       case "Boolean" => fakeConfig(config).as[BooleanField]("fakeRoot")
       case "Date" => fakeConfig(config).as[DateField]("fakeRoot")
       case "Timestamp" => fakeConfig(config).as[TimestampField]("fakeRoot")
+      case "Record" => fakeConfig(config).as[RecordField]("fakeRoot")
       case "Map" => fakeConfig(config).as[MapField]("fakeRoot")
       case "List" => fakeConfig(config).as[ListField]("fakeRoot")
     }
@@ -232,7 +247,8 @@ object Field {
   }
 
   def isRequired(field: FieldType): Boolean = field.isRequired || (field match {
-    case mf: MapField if mf.fields.isDefined => mf.fields.get exists isRequired
+    case rf: RecordField => rf.fields exists isRequired
+    case mf: MapField => mf.field exists isRequired
     case lf: ListField if lf.field.isDefined => isRequired(lf.field.get)
     case _ => false
   })

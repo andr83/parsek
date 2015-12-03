@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 /**
  * @author andr83
  */
-case class Fields(root: MapField) extends Pipe {
+case class Fields(root: RecordField) extends Pipe {
 
   override def run(value: PValue)(implicit context: PipeContext): Option[PValue] = {
     implicit val errors = mutable.ListBuffer.empty[FieldError]
@@ -42,7 +42,7 @@ case class Fields(root: MapField) extends Pipe {
 object Fields {
   def apply(config: Config): Fields = {
     val fields = config.as[List[Config]]("config") map Field.apply
-    val root = MapField(name = "root", fields = Some(fields))
+    val root = RecordField(name = "root", fields = fields)
     Fields(root)
   }
 }

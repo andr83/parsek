@@ -12,13 +12,13 @@ import net.ceedubs.ficus.readers.ArbitraryTypeReader._
  */
 case class CsvParser(config: Config) extends TransformPipe(config) {
 
-  val root: MapField = {
+  val root: RecordField = {
     val fields = try {
       config.as[List[String]]("fields") map (f => StringField(f))
     } catch {
       case _: Throwable => config.as[List[FieldType]]("fields")
     }
-    MapField("root", fields = Some(fields))
+    RecordField("root", fields = fields)
   }
 
   val validatePipe = Fields(root)
@@ -37,7 +37,7 @@ case class CsvParser(config: Config) extends TransformPipe(config) {
   override def transformString(str: String)(implicit context: PipeContext): Option[PValue] = {
     val csvValues = if (multiLine) parser.parseLineMulti(str) else parser.parseLine(str)
     var i = -1
-    val res = root.fields.get.toList flatMap (f=> {
+    val res = root.fields flatMap (f=> {
       i += 1
       parse(csvValues(i), f) map (v=> f.name -> v)
     })
@@ -45,8 +45,8 @@ case class CsvParser(config: Config) extends TransformPipe(config) {
   }
 
   def parse(str: String, field: FieldType, level: Int = 2): Option[PValue] = field match {
-    case f: MapField =>
-      val map = str.split(getDelimiter(level)).toList.flatMap(kv=> {
+    case f: RecordField =>
+      val map = str.split(getDelimiter(level)).flatMap(kv=> {
         val parts = kv.split(getDelimiter(level + 1))
         if (parts.size != 2) {
           logger.warn(s"Unexpected delimited map content. Expected [key,value] but get: $kv")
@@ -56,11 +56,28 @@ case class CsvParser(config: Config) extends TransformPipe(config) {
         }
       }).toMap
       val res = for {
-        cf <- f.fields.get
+        cf <- f.fields
         cv <- map.get(cf.name)
         pv <- parse(cv, cf,  level + 2)
       } yield cf.name -> pv
       if (res.isEmpty) None else Some(res.toMap)
+    case f: MapField =>
+      val map = str.split(getDelimiter(level)).flatMap(kv=> {
+        val parts = kv.split(getDelimiter(level + 1))
+        if (parts.size != 2) {
+          logger.warn(s"Unexpected delimited map content. Expected [key,value] but get: $kv")
+          None
+        } else {
+          Some(parts(0) -> parts(1))
+        }
+      }).toMap
+      if (map.isEmpty) None else f.field match {
+        case Some(mapField) =>
+          val res = map.mapValues(parse(_, mapField, level + 2)) collect {
+            case (k, Some(v)) => k -> v
+          }
+          if (res.isEmpty) None else Some(res)
+      }
     case f: ListField =>
       val parts = str.split(getDelimiter(level))
       if (parts.isEmpty) None else f.field match {
@@ -73,10 +90,12 @@ case class CsvParser(config: Config) extends TransformPipe(config) {
   }
 
   def getDelimiter(level: Int): String = if (level == 1) {
-    listDelimiter
+    delimiter.toString
   } else if (level == 2) {
+    listDelimiter
+  } else if (level == 3) {
     mapFieldDelimiter
-  } else if (level < 9) {
+  } else if (level < 25) {
     level.toChar.toString
-  } else throw new IllegalStateException("Exceed the maximum level 8 of nesting for csv serializer")
+  } else throw new IllegalStateException("Exceed the maximum level 24 of nesting for csv serializer")
 }

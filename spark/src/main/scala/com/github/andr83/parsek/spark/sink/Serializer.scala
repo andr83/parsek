@@ -2,12 +2,13 @@ package com.github.andr83.parsek.spark.sink
 
 import com.github.andr83.parsek._
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.slf4j.LazyLogging
 import net.ceedubs.ficus.Ficus._
 
 /**
  * @author andr83
  */
-abstract class Serializer(config: Config) {
+abstract class Serializer(config: Config) extends LazyLogging {
   def write(value: PValue): Array[Byte]
 }
 
