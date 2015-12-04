@@ -4,8 +4,6 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import net.ceedubs.ficus.Ficus._
 
-import scala.reflect.runtime.{universe => u}
-
 /**
  * @author andr83
  */

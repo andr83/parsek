@@ -1,6 +1,7 @@
 package com.github.andr83.parsek.spark.sink
 
 import com.github.andr83.parsek._
+import com.github.andr83.parsek.serde.SerDe
 import com.github.andr83.parsek.spark.Sink
 import com.github.andr83.parsek.spark.util.HadoopUtils
 import com.typesafe.config.Config
@@ -17,7 +18,7 @@ class TextFileSink(config: Config) extends Sink(config) {
 
   override def sink(rdd: RDD[PValue]): Unit = {
     val out = serializer map (serializerConf => rdd.mapPartitions(it => {
-      val s = Serializer(serializerConf)
+      val s = SerDe(serializerConf)
       it.map(v => new String(s.write(v).map(_.toChar)))
     }).filter(_.trim.nonEmpty)) getOrElse rdd
     codec match {
