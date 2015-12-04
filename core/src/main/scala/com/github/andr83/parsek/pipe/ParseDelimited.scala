@@ -5,12 +5,11 @@ import com.github.andr83.parsek.meta._
 import com.opencsv.CSVParser
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
-import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 
 /**
  * @author andr83
  */
-case class CsvParser(config: Config) extends TransformPipe(config) {
+case class ParseDelimited(config: Config) extends TransformPipe(config) {
 
   val root: RecordField = {
     val fields = try {
@@ -71,12 +70,11 @@ case class CsvParser(config: Config) extends TransformPipe(config) {
           Some(parts(0) -> parts(1))
         }
       }).toMap
-      if (map.isEmpty) None else f.field match {
-        case Some(mapField) =>
-          val res = map.mapValues(parse(_, mapField, level + 2)) collect {
-            case (k, Some(v)) => k -> v
-          }
-          if (res.isEmpty) None else Some(res)
+      if (map.isEmpty || f.field.isEmpty) None else {
+        val res = map.mapValues(parse(_, f.field.get, level + 2)) collect {
+          case (k, Some(v)) => k -> v
+        }
+        if (res.isEmpty) None else Some(res)
       }
     case f: ListField =>
       val parts = str.split(getDelimiter(level))

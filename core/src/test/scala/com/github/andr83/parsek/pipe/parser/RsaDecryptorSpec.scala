@@ -4,7 +4,7 @@ import java.security.KeyPairGenerator
 import javax.crypto.Cipher
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.pipe.RsaDecryptor
+import com.github.andr83.parsek.pipe.DecryptRsa
 import com.typesafe.config.ConfigFactory
 import org.apache.commons.lang.RandomStringUtils
 import org.scalatest.{FlatSpec, Inside, Matchers}
@@ -37,7 +37,7 @@ class RsaDecryptorSpec extends FlatSpec with Matchers with Inside {
       "field" -> "body"
     ))
 
-    val decryptor = RsaDecryptor(config)
+    val decryptor = DecryptRsa(config)
 
     val result: Option[PMap] = decryptor.run(PMap(Map(
       "body" -> body

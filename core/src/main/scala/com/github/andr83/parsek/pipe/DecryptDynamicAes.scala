@@ -10,7 +10,7 @@ import net.ceedubs.ficus.Ficus._
 /**
  * @author Andrei Tupitcyn
  */
-case class DynamicAesDecryptor(config: Config) extends TransformPipe(config) {
+case class DecryptDynamicAes(config: Config) extends TransformPipe(config) {
   val aesKeyField = config.as[String]("aesKeyField").split('.').toSeq
   val algorithm = config.as[Option[String]]("algorithm").getOrElse("AES/ECB/PKCS5Padding")
 

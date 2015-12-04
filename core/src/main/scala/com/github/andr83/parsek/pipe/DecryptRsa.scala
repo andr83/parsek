@@ -11,7 +11,7 @@ import net.ceedubs.ficus.Ficus._
 /**
  * @author Andrei Tupitcyn
  */
-case class RsaDecryptor(config: Config) extends TransformPipe(config) {
+case class DecryptRsa(config: Config) extends TransformPipe(config) {
   val privateKey = {
     val rsaKeyBytes = config.as[String]("privateKey").asBytes
 

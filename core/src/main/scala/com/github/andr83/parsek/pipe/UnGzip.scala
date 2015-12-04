@@ -9,7 +9,7 @@ import com.typesafe.config.Config
 /**
  * @author andr83
  */
-case class GzipDecompressor(config: Config) extends TransformPipe(config) {
+case class UnGzip(config: Config) extends TransformPipe(config) {
   override def transformString(str: String)(implicit context: PipeContext): Option[PValue] = {
     val in = new GZIPInputStream(new ByteArrayInputStream(str.asBytes))
     val out = scala.io.Source.fromInputStream(in).getLines().mkString("\n")

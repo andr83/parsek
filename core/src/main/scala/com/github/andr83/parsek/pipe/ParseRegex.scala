@@ -12,9 +12,9 @@ import scala.util.matching.Regex
 /**
  * @author andr83
  */
-case class RegexParser(config: Config) extends TransformPipe(config) {
+case class ParseRegex(config: Config) extends TransformPipe(config) {
   val regex = config.as[String]("pattern").r
-  val namedGroups = RegexParser.getNamedGroups(regex)
+  val namedGroups = ParseRegex.getNamedGroups(regex)
 
   override def transformString(str: String)(implicit context: PipeContext): Option[PValue] = for (
     m <- regex.findFirstMatchIn(str)
@@ -27,7 +27,7 @@ case class RegexParser(config: Config) extends TransformPipe(config) {
     }
 }
 
-object RegexParser {
+object ParseRegex {
   def getNamedGroups(regex: Regex): Map[String, Int] = {
     try {
       val namedGroupsMethod: Method = regex.pattern.getClass.getDeclaredMethod("namedGroups")
@@ -38,5 +38,5 @@ object RegexParser {
     }
   }
 
-  def apply(): RegexParser = RegexParser(ConfigFactory.empty())
+  def apply(): ParseRegex = ParseRegex(ConfigFactory.empty())
 }

@@ -1,7 +1,7 @@
 package com.github.andr83.parsek.pipe.parser
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.pipe.RegexParser
+import com.github.andr83.parsek.pipe.ParseRegex
 import com.typesafe.config.ConfigFactory
 import org.scalatest._
 
@@ -19,7 +19,7 @@ class RegexParserSpec extends FlatSpec with Matchers with Inside {
     val config = ConfigFactory.parseMap(Map(
       "pattern" -> "(?<time>[\\d\\s-:]+),\\s+\\[(?<ip>[\\d\\.]+)\\].+\\[(?<q>.+)\\].*"
     ))
-    val parser = new RegexParser(config)
+    val parser = new ParseRegex(config)
     val result = parser.transformString(line)
 
     result shouldBe Some(PMap(Map(

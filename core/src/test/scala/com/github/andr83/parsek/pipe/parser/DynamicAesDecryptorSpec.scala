@@ -1,6 +1,5 @@
 package com.github.andr83.parsek.pipe.parser
 
-import java.security.KeyPairGenerator
 import javax.crypto.Cipher
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 
@@ -37,7 +36,7 @@ class DynamicAesDecryptorSpec extends FlatSpec with Matchers with Inside {
       "algorithm" -> "AES/CBC/PKCS5Padding"
     ))
 
-    val decryptor = DynamicAesDecryptor(config)
+    val decryptor = DecryptDynamicAes(config)
 
     val result: Option[PMap] = decryptor.run(PMap(Map(
       "body" -> body,
@@ -72,7 +71,7 @@ class DynamicAesDecryptorSpec extends FlatSpec with Matchers with Inside {
       "algorithm" -> "AES/ECB/PKCS5Padding"
     ))
 
-    val decryptor = DynamicAesDecryptor(config)
+    val decryptor = DecryptDynamicAes(config)
 
     val result: Option[PMap] = decryptor.run(PMap(Map(
       "body" -> body,

@@ -1,12 +1,13 @@
 package com.github.andr83.parsek.meta
 
 import com.github.andr83.parsek._
+//import com.github.andr83.parsek.ParsekConfig._
 import com.github.nscala_time.time.Imports._
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
+//import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import org.joda.time.format.DateTimeFormatter
 
-import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
@@ -228,16 +229,17 @@ object Field {
   def apply(config: Config): FieldType = {
     import net.ceedubs.ficus.readers.ArbitraryTypeReader._
     val field = config.as[String]("type") match {
-      case "String" => fakeConfig(config).as[StringField]("fakeRoot")
-      case "Int" => fakeConfig(config).as[IntField]("fakeRoot")
-      case "Long" => fakeConfig(config).as[LongField]("fakeRoot")
-      case "Double" => fakeConfig(config).as[DoubleField]("fakeRoot")
-      case "Boolean" => fakeConfig(config).as[BooleanField]("fakeRoot")
-      case "Date" => fakeConfig(config).as[DateField]("fakeRoot")
-      case "Timestamp" => fakeConfig(config).as[TimestampField]("fakeRoot")
-      case "Record" => fakeConfig(config).as[RecordField]("fakeRoot")
-      case "Map" => fakeConfig(config).as[MapField]("fakeRoot")
-      case "List" => fakeConfig(config).as[ListField]("fakeRoot")
+      case "String" => config.fake().as[StringField](fakeKey)
+      case "Int" => config.fake().as[IntField](fakeKey)
+      case "Long" => config.fake().as[LongField](fakeKey)
+      case "Double" => config.fake().as[DoubleField](fakeKey)
+      case "Boolean" => config.fake().as[BooleanField](fakeKey)
+      case "Date" => config.fake().as[DateField](fakeKey)
+      case "Timestamp" => config.fake().as[TimestampField](fakeKey)
+      case "Record" => config.fake().as[RecordField](fakeKey)
+      case "Map" => config.fake().as[MapField](fakeKey)
+      case "List" => config.fake().as[ListField](fakeKey)
+      case fieldType => throw new IllegalStateException(s"Unsupported field type $fieldType")
     }
 
     field.as = config.as[Option[String]]("as")
@@ -252,6 +254,4 @@ object Field {
     case lf: ListField if lf.field.isDefined => isRequired(lf.field.get)
     case _ => false
   })
-
-  def fakeConfig(config: Config): Config = ConfigFactory.parseMap(Map("fakeRoot" -> config.root().unwrapped()))
 }

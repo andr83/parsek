@@ -8,7 +8,7 @@ import org.json4s.jackson.JsonMethods.{parse => jsonParse}
 /**
  * @author andr83
  */
-case class JsonParser(config: Config) extends TransformPipe(config) {
+case class ParseJson(config: Config) extends TransformPipe(config) {
 
   def transformString(str: String)(implicit context: PipeContext): Option[PValue] = {
     val json = jsonParse(str)
@@ -38,6 +38,6 @@ case class JsonParser(config: Config) extends TransformPipe(config) {
   }
 }
 
-object JsonParser {
-  def apply(): JsonParser = JsonParser(ConfigFactory.empty())
+object ParseJson {
+  def apply(): ParseJson = ParseJson(ConfigFactory.empty())
 }

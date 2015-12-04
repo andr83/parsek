@@ -56,7 +56,7 @@ object ParsekJob extends SparkJob {
     implicit val context = SparkPipeContext(sc)
     val outRdd: RDD[PValue] = (config.as[Option[List[Config]]]("pipes") map (pipes => {
       rdd mapPartitions (it => {
-        val pipeline = Pipeline(pipes.map(_.root()))
+        val pipeline = Pipeline(pipes)
         it.flatMap(pipeline.run)
       }) flatMap {
         case PList(list) => list

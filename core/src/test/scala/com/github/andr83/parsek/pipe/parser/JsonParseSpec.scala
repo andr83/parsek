@@ -1,7 +1,7 @@
 package com.github.andr83.parsek.pipe.parser
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.pipe.JsonParser
+import com.github.andr83.parsek.pipe.ParseJson
 import org.scalatest.{FlatSpec, Inside, Matchers}
 
 /**
@@ -23,7 +23,7 @@ class JsonParseSpec extends FlatSpec with Matchers with Inside {
         | }
         |}
       """.stripMargin)
-    val parser = JsonParser()
+    val parser = ParseJson()
     val result = parser.run(json)
 
     result shouldBe Some(PMap(Map(
