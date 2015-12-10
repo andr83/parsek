@@ -179,3 +179,10 @@ case class TsvSerDe(config: Config) extends DelimitedSerDeTrait {
   override val listDelimiter = '|'
   override val mapFieldDelimiter = ':'
 }
+
+case class HiveTsvSerDe(config: Config) extends DelimitedSerDeTrait {
+  override val delimiter = '\t'
+  override val listDelimiter = '|'
+  override val mapFieldDelimiter = ':'
+  override val enclosure = CSVWriter.NO_ESCAPE_CHARACTER
+}

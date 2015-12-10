@@ -6,8 +6,6 @@ import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 //import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import org.joda.time.format.DateTimeFormatter
-
 import scala.collection.mutable
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
@@ -122,39 +120,14 @@ case class BooleanField(
 
 case class DateField(
   name: String,
-  pattern: DateTimeFormatter,
+  pattern: DateFormatter,
   toTimeZone: Option[DateTimeZone] = None
 ) extends Field[PDate] {
   override def validate(value: PValue)
-      (implicit errors: mutable.Buffer[FieldError]): Option[PDate] = Some(value match {
-    case v: PDate => v
-    case PString(str) =>
-      val dt = pattern.parseDateTime(str)
-      val res = toTimeZone map (tz => dt.toDateTime(tz)) getOrElse dt
-      res
-    case _ => throw IllegalValueType(s"Field $name expect date value type but got $value")
+      (implicit errors: mutable.Buffer[FieldError]): Option[PDate] = Some({
+    val dt = pattern.parse(value)
+    toTimeZone map (tz => PDate(dt.value.toDateTime(tz))) getOrElse dt
   })
-}
-
-case class TimestampField(
-  name: String,
-  timeZone: Option[DateTimeZone]
-) extends Field[PDate] {
-  override def validate(value: PValue)
-      (implicit errors: mutable.Buffer[FieldError]): Option[PDate] = Some(value match {
-    case v: PDate => v
-    case PInt(num) => parse(num * 1000L)
-    case PLong(num) => parse(if (num >= 100000000000L) num else num * 1000)
-    case PString(str) =>
-      val num = str.toLong
-      parse(if (num >= 100000000000L) num else num * 1000)
-    case _ => throw IllegalValueType(s"Field $name expect date value type but got $value")
-  })
-
-  def parse(ts: Long): DateTime = {
-    val dt = new DateTime(ts)
-    timeZone map (tz => dt.toDateTime(tz)) getOrElse dt
-  }
 }
 
 case class RecordField(
@@ -226,8 +199,9 @@ case class ListField(
 
 object Field {
 
-  def apply(config: Config): FieldType = {
+  def apply(cfg: Config): FieldType = {
     import net.ceedubs.ficus.readers.ArbitraryTypeReader._
+    val config = if (cfg.hasPath("name")) cfg else cfg.withFallback(Map("name" -> "NoName"))
     val field = config.as[String]("type") match {
       case "String" => config.fake().as[StringField](fakeKey)
       case "Int" => config.fake().as[IntField](fakeKey)
@@ -235,7 +209,7 @@ object Field {
       case "Double" => config.fake().as[DoubleField](fakeKey)
       case "Boolean" => config.fake().as[BooleanField](fakeKey)
       case "Date" => config.fake().as[DateField](fakeKey)
-      case "Timestamp" => config.fake().as[TimestampField](fakeKey)
+//      case "Timestamp" => config.fake().as[TimestampField](fakeKey)
       case "Record" => config.fake().as[RecordField](fakeKey)
       case "Map" => config.fake().as[MapField](fakeKey)
       case "List" => config.fake().as[ListField](fakeKey)

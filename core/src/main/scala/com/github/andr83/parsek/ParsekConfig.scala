@@ -1,13 +1,10 @@
 package com.github.andr83.parsek
 
-import java.util.Locale
-
 import com.github.andr83.parsek.meta._
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.{Config, ConfigException}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
-import org.joda.time.format.ISODateTimeFormat
 
 import scala.language.implicitConversions
 import scala.util.matching.Regex
@@ -22,11 +19,10 @@ object ParsekConfig {
 
   implicit val dateConfigReader: ValueReader[DateField] = ValueReader.relative(config => {
     val timeZone = config.as[Option[DateTimeZone]]("timeZone")
-    val pattern = (config.as[Option[String]]("format")
-      .map(fmt=> DateTimeFormat.forPattern(fmt)) getOrElse ISODateTimeFormat.dateTime()).withLocale(Locale.ENGLISH)
+    val formatter = DateFormatter(config.as[Option[String]]("format"), timeZone)
     DateField(
       name = config.as[String]("name"),
-      pattern = timeZone map (tz => pattern.withZone(tz)) getOrElse pattern,
+      pattern = formatter,
       toTimeZone = config.as[Option[DateTimeZone]]("toTimeZone")
     )
   })
