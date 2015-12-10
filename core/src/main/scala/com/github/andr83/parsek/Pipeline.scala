@@ -14,7 +14,7 @@ class Pipeline(pipes: Pipe*) extends Serializable with LazyLogging {
 
   def run(value: PValue)(implicit context: PipeContext): List[PValue] = {
     try {
-      val res = nextPipe(pipes.iterator, value)
+      val res = nextPipe(pipes, value)
       context.getCounter(InfoGroup, "OUTPUT_ROWS") += res.length
       res
     } catch {
@@ -35,16 +35,16 @@ class Pipeline(pipes: Pipe*) extends Serializable with LazyLogging {
     }
   }
 
-  private def nextPipe(it: Iterator[Pipe], value: PValue)(implicit context: PipeContext): List[PValue] = if (it.hasNext) {
+  private def nextPipe(pipeline: Seq[Pipe], value: PValue)(implicit context: PipeContext): List[PValue] = if (pipeline.nonEmpty) {
     context.path = Seq.empty[String]
     context.row = value match {
       case map: PMap => map
       case _ => PMap.empty
     }
-    val pipe = it.next()
+    val pipe = pipeline.head
     pipe.run(value) map {
-      case PList(list) => list flatMap(nextPipe(it, _))
-      case pipeResult => nextPipe(it, pipeResult)
+      case PList(list) => list flatMap(nextPipe(pipeline.tail, _))
+      case pipeResult => nextPipe(pipeline.tail, pipeResult) //to-do fix iterator reset!!!
     } getOrElse List.empty[PValue]
   } else value match {
     case PList(list) => list
