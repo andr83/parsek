@@ -84,6 +84,8 @@ object PList {
 object PMap {
   def empty = PMap(Map.empty[String, PValue])
 
+  def apply(values: (String, PValue)*): PMap = new PMap(Map(values:_*))
+
   def updateValue(map: PMap, path: Seq[String], newValue: PValue): PMap = {
     val head = path.head
     val tail = path.tail
@@ -91,7 +93,7 @@ object PMap {
       PMap(map.value + (head -> newValue))
     } else map.value.get(head) match {
       case Some(v: PMap) => updateValue(v, tail, newValue)
-      case None => updateValue(PMap(map.value + (head -> PMap.empty)), tail, newValue)
+      case None => PMap(map.value + (head -> updateValue(PMap.empty, tail, newValue)))
       case _ => throw new IllegalStateException(s"Can not update value in path $path in $map")
     }
   }

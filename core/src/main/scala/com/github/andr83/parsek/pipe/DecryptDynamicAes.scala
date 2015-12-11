@@ -8,11 +8,27 @@ import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
 /**
- * @author Andrei Tupitcyn
- */
-case class DecryptDynamicAes(config: Config) extends TransformPipe(config) {
-  val aesKeyField = config.as[String]("aesKeyField").split('.').toSeq
-  val algorithm = config.as[Option[String]]("algorithm").getOrElse("AES/ECB/PKCS5Padding")
+  * Decrypt field value by Aes algorithm with key from aesKeyField
+  *
+  * @param aesKeyField field path to AES private key
+  * @param field field path to decrypt
+  * @param algorithm algorithm to decrypt, by default AES/ECB/PKCS5Padding
+  * @param as path where to save result of decrypting
+  *
+  * @author andr83
+  */
+case class DecryptDynamicAes(
+  aesKeyField: FieldPath,
+  field: FieldPath,
+  algorithm: String = DecryptDynamicAes.DefaultAlgorithm,
+  as: Option[FieldPath] = None) extends TransformPipe(field, as)
+{
+  def this(config: Config) = this(
+    aesKeyField = config.as[String]("aesKeyField").asFieldPath,
+    field = config.as[String]("field").split('.').toSeq,
+    algorithm = config.as[Option[String]]("algorithm").getOrElse(DecryptDynamicAes.DefaultAlgorithm),
+    as = config.as[Option[String]]("as").map(_.asFieldPath)
+  )
 
   override def transformString(str: String)(implicit context: PipeContext): Option[PValue] = {
     context.row.getValue(aesKeyField).map{
@@ -31,4 +47,10 @@ case class DecryptDynamicAes(config: Config) extends TransformPipe(config) {
       case value => throw new IllegalStateException(s"Aes key must be a string but $value given")
     }
   }
+}
+
+object DecryptDynamicAes {
+  val DefaultAlgorithm = "AES/ECB/PKCS5Padding"
+
+  def apply(config: Config): DecryptDynamicAes = new DecryptDynamicAes(config)
 }

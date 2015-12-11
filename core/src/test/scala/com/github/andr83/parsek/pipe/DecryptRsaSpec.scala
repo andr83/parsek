@@ -1,10 +1,9 @@
-package com.github.andr83.parsek.pipe.parser
+package com.github.andr83.parsek.pipe
 
 import java.security.KeyPairGenerator
 import javax.crypto.Cipher
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.pipe.DecryptRsa
 import com.typesafe.config.ConfigFactory
 import org.apache.commons.lang.RandomStringUtils
 import org.scalatest.{FlatSpec, Inside, Matchers}
@@ -14,7 +13,7 @@ import scala.collection.JavaConversions._
 /**
  * @author Andrei Tupitcyn
  */
-class RsaDecryptorSpec extends FlatSpec with Matchers with Inside {
+class DecryptRsaSpec extends FlatSpec with Matchers with Inside {
   implicit val context = new PipeContext()
 
   // at first necessary convert RSA private key:
@@ -39,9 +38,9 @@ class RsaDecryptorSpec extends FlatSpec with Matchers with Inside {
 
     val decryptor = DecryptRsa(config)
 
-    val result: Option[PMap] = decryptor.run(PMap(Map(
-      "body" -> body
-    ))).map(_.asInstanceOf[PMap])
+    val result: Option[PMap] = decryptor.run(PMap(
+      "body" -> PString(body)
+    )).map(_.asInstanceOf[PMap])
 
     assert(result.nonEmpty)
 

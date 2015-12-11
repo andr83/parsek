@@ -1,14 +1,25 @@
 package com.github.andr83.parsek.pipe
 
 import com.github.andr83.parsek._
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 import org.json4s._
 import org.json4s.jackson.JsonMethods.{parse => jsonParse}
 
 /**
- * @author andr83
- */
-case class ParseJson(config: Config) extends TransformPipe(config) {
+  * Parse string as Json
+  *
+  * @author andr83
+  */
+case class ParseJson(
+  field: FieldPath = Seq.empty[String],
+  as: Option[FieldPath] = None
+) extends TransformPipe(field, as) {
+
+  def this(config: Config) = this(
+    field = config.as[String]("field").asFieldPath,
+    as = config.as[Option[String]]("as").map(_.asFieldPath)
+  )
 
   def transformString(str: String)(implicit context: PipeContext): Option[PValue] = {
     val json = jsonParse(str)
@@ -39,5 +50,5 @@ case class ParseJson(config: Config) extends TransformPipe(config) {
 }
 
 object ParseJson {
-  def apply(): ParseJson = ParseJson(ConfigFactory.empty())
+  def apply(config: Config): ParseJson = new ParseJson(config)
 }

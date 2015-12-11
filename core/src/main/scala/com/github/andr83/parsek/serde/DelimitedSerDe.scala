@@ -43,7 +43,7 @@ trait DelimitedSerDeTrait extends SerDe {
         case _ => throw new IllegalStateException(s"Can not serialize $value as Record ${f.name}")
       }
       f.fields map (innerField => {
-        val res = map.get(innerField.writeName) map (convertToDelimited(_, innerField, level + 1))
+        val res = map.get(innerField.asField) map (convertToDelimited(_, innerField, level + 1))
         res.getOrElse(nullValue)
       }) mkString getDelimiter(level)
     case f: MapField =>
@@ -137,7 +137,7 @@ trait DelimitedSerDeTrait extends SerDe {
   override def write(value: PValue): Array[Byte] = value match {
     case PMap(map) =>
       try {
-        val res = fields.map(f => map.get(f.writeName) match {
+        val res = fields.map(f => map.get(f.asField) match {
           case Some(v) => convertToDelimited(v, f, 2)
           case None => nullValue
         })

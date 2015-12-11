@@ -20,7 +20,7 @@ case class ParseDelimited(config: Config) extends TransformPipe(config) {
     RecordField("root", fields = fields)
   }
 
-  val validatePipe = Fields(root)
+  val validatePipe = Validate(root)
 
   val delimiter: Char = config.as[Option[Char]]("delimiter").getOrElse(',')
   val enclosure: Char = config.as[Option[Char]]("enclosure").getOrElse('"')

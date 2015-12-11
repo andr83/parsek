@@ -7,9 +7,16 @@ import net.ceedubs.ficus.Ficus._
 /**
  * @author andr83
  */
-abstract class TransformPipe(config: Config) extends Pipe {
-  val field = config.as[Option[String]]("field") map (_.split('.').toSeq)
-  val asField = config.as[Option[String]]("as") map (_.split('.').toSeq) getOrElse field.getOrElse(Seq.empty[String])
+abstract class TransformPipe(field: FieldPath, as: Option[FieldPath] = None) extends Pipe {
+  val asField = as.getOrElse(field)
+
+  def this(field: String) = this(field.split('.'))
+  def this(field: String, as: Option[String]) = this(field.asFieldPath, as.map(_.asFieldPath))
+
+  def this(config: Config) = this(
+    field = config.as[String]("field").asFieldPath,
+    as = config.as[Option[String]]("as").map(_.asFieldPath)
+  )
 
   override def run(value: PValue)(implicit context: PipeContext): Option[PValue] = {
     value match {
@@ -17,7 +24,7 @@ abstract class TransformPipe(config: Config) extends Pipe {
         context.row = map
       case _ =>
     }
-    context.path = field.getOrElse(Seq.empty[String])
+    context.path = field
 
     val res = transform(value, field)
     if (asField.isEmpty) {
@@ -31,9 +38,9 @@ abstract class TransformPipe(config: Config) extends Pipe {
     })
   }
 
-  def transform(value: PValue, field: Option[Seq[String]] = None)(implicit context: PipeContext): Option[PValue] = value match {
+  def transform(value: PValue, field: Seq[String])(implicit context: PipeContext): Option[PValue] = value match {
     case PString(raw) if field.isEmpty => transformString(raw)
-    case map: PMap if field.isDefined => map.getValue(field.get) flatMap (fieldValue => transform(fieldValue))
+    case map: PMap if field.nonEmpty => map.getValue(field) flatMap (fieldValue => transform(fieldValue, field.tail))
     case _ => throw new IllegalArgumentException(
       s"String transform pipe accept only string input but ${value.getClass} given. Value: $value"
     )

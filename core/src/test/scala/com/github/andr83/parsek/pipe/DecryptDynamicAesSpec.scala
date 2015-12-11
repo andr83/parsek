@@ -1,20 +1,16 @@
-package com.github.andr83.parsek.pipe.parser
+package com.github.andr83.parsek.pipe
 
 import javax.crypto.Cipher
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.pipe._
-import com.typesafe.config.ConfigFactory
 import org.apache.commons.lang.RandomStringUtils
 import org.scalatest.{FlatSpec, Inside, Matchers}
-
-import scala.collection.JavaConversions._
 
 /**
  * @author andr83
  */
-class DynamicAesDecryptorSpec extends FlatSpec with Matchers with Inside {
+class DecryptDynamicAesSpec extends FlatSpec with Matchers with Inside {
   implicit val context = new PipeContext()
 
   "The content " should " be a string encoded with dynamic AES key with parameters" in {
@@ -30,18 +26,16 @@ class DynamicAesDecryptorSpec extends FlatSpec with Matchers with Inside {
     //Encrypt body message with AES
     val body = aesCipher.doFinal(rawBody.getBytes).asStr
 
-    val config = ConfigFactory.parseMap(Map(
-      "field" -> "body",
-      "aesKeyField" -> "aesKey",
-      "algorithm" -> "AES/CBC/PKCS5Padding"
-    ))
+    val decryptor = DecryptDynamicAes(
+      aesKeyField = "aesKey".asFieldPath,
+      field = "body".asFieldPath,
+      algorithm = "AES/CBC/PKCS5Padding"
+    )
 
-    val decryptor = DecryptDynamicAes(config)
-
-    val result: Option[PMap] = decryptor.run(PMap(Map(
+    val result: Option[PMap] = decryptor.run(PMap(
       "body" -> body,
       "aesKey" -> (aesKey ++ aesPadding).asStr
-    ))).map(_.asInstanceOf[PMap])
+    )).map(_.asInstanceOf[PMap])
 
     assert(result.nonEmpty)
 
@@ -65,18 +59,16 @@ class DynamicAesDecryptorSpec extends FlatSpec with Matchers with Inside {
     //Encrypt body message with AES
     val body = aesCipher.doFinal(rawBody.getBytes).asStr
 
-    val config = ConfigFactory.parseMap(Map(
-      "field" -> "body",
-      "aesKeyField" -> "aesKey",
-      "algorithm" -> "AES/ECB/PKCS5Padding"
-    ))
+    val decryptor = DecryptDynamicAes(
+      aesKeyField = "aesKey".asFieldPath,
+      field = "body".asFieldPath,
+      algorithm = "AES/ECB/PKCS5Padding"
+    )
 
-    val decryptor = DecryptDynamicAes(config)
-
-    val result: Option[PMap] = decryptor.run(PMap(Map(
+    val result: Option[PMap] = decryptor.run(PMap(
       "body" -> body,
       "aesKey" -> aesKey.asStr
-    ))).map(_.asInstanceOf[PMap])
+    )).map(_.asInstanceOf[PMap])
 
     assert(result.nonEmpty)
 
