@@ -2,13 +2,16 @@ package com.github.andr83.parsek.spark
 
 import com.github.andr83.parsek._
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.slf4j.LazyLogging
 import net.ceedubs.ficus.Ficus._
 import org.apache.spark.rdd.RDD
 
 /**
- * @author andr83
- */
-abstract class Source(config: Config) {
+  * Source is an abstract class to create RDD from different sources.
+  *
+  * @author andr83
+  */
+abstract class Source extends LazyLogging {
   def apply(job: SparkJob): RDD[PValue]
 }
 

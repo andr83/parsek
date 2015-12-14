@@ -34,7 +34,7 @@ package object parsek {
 
   implicit class RichString(val str: String) extends AnyVal {
     def asBytes: Array[Byte] = str.map(_.toByte).toArray
-    def asFieldPath: Seq[String] = str.split('.')
+    def asFieldPath: Seq[String] = if(str.isEmpty) Seq.empty[String] else str.split('.')
   }
 
   implicit class RichByteArray(val arr: Array[Byte]) extends AnyVal {

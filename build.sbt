@@ -13,7 +13,7 @@ val scalaLoggingVersion = "2.1.2"
 val scalaTestVersion = "2.2.+"
 val scalaTimeVersion = "1.8.+"
 val scoptVersion = "3.3.+"
-val slf4jVersion = "1.7.+"
+val slf4jVersion = "1.7.5"
 val sparkVersion = "1.3.+"
 val typesafeConfigVersion = "1.2.+"
 

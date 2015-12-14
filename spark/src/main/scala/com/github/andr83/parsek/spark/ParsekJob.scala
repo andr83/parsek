@@ -12,8 +12,8 @@ import resource._
 import scala.collection.JavaConversions._
 
 /**
- * @author andr83
- */
+  * @author andr83
+  */
 object ParsekJob extends SparkJob {
 
   var config = ConfigFactory.empty()
@@ -51,7 +51,7 @@ object ParsekJob extends SparkJob {
   override def job(): Unit = {
     val startTime = System.currentTimeMillis()
     val sources = config.as[List[Config]]("sources") map Source.apply
-    val rdd: RDD[PValue] = sources.map(_(this)).reduce(_ ++ _)
+    val rdd: RDD[PValue] = sources.map(_ (this)).reduce(_ ++ _)
 
     implicit val context = SparkPipeContext(sc)
     val outRdd: RDD[PValue] = (config.as[Option[List[Config]]]("pipes") map (pipes => {
@@ -69,7 +69,7 @@ object ParsekJob extends SparkJob {
 
     logger.info(s"Duration: ${System.currentTimeMillis() - startTime}ms")
     logger.info("Counters:")
-    context.getCounters.toSeq.sortWith(_._1.toString() < _._1.toString()) foreach{case(key, count)=>
+    context.getCounters.toSeq.sortWith(_._1.toString() < _._1.toString()) foreach { case (key, count) =>
       logger.info(s"$key: $count")
     }
   }
