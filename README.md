@@ -6,7 +6,7 @@ Parsek designed for parse, validate and transform log files in different formats
 
 ##Overview
 
-![Parsek workflow](https://drive.google.com/thumbnail?id=0B6RjvrMY5aLaU0NYVEYwVWF4Rzg&authuser=0&v=1450197607380&sz=w2480-h1280)
+![Parsek workflow](https://lh3.googleusercontent.com/tVOLaNiDTV6RKignddM5IKlRcw7HZyvBekm4lQwjbHJqxMJEohDsdfvjmc-Sjc-znE36AobGqhDptfTWm3uPf1r-r9xopEizubPAhIbGmwMAHrCjJ7jlHOQ0aKS080uvg8EyeuKlVhtmJLGfr0wG8-QQ3zttdk023eQGY37BRVCId72PbZ-tQ6VxlErXKvAvsQUlEJ5UdoMONo3bqmHhC3N2e62Drf7Jf2idFsBoERUQHNle3MHTHBgserE-EishfgS9M8svif1o1vr969haL7soJ9_NtdJS7-Ba3llf7ET_HgTCygnCqkuI2smSVRiFI9HRfk3rPy2mD4KDPbpI7NgzDrLJj6pwsgkL6Um6EafVo0w0GC_l7DS2wTSeLs8ZoX8FXLaIIzL_Mpqf5MCiZOvRez64n-auTep6xx3YSDTHJJIAVQeLl4-naEAPvIIfh_-wan2EtksHeJ1Q0BbLeYWYAW4i3b9F_AJZjUY-NaVLLKCPmjvcO0HHWyQZSeaS26w4vGh71wr9_Bff4Jwco8GBeRaa-Veped4RGl0h-9l7SsZT8eQwbMlaxMMYeJ4db-Qrew=w929-h266-no)
 
 Parsek allow organise work process in pipes. Where each pipe is a unit of work and multiple pipes can be join in pipeline. 
 
