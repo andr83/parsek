@@ -38,6 +38,10 @@ case class TextFileSource(path: Seq[String], filters: Seq[PathFilter]) extends S
     val files = path.flatMap(job.listFilesOnly(_, defaultHadoopFilter +: filters))
     logger.info("Input files:")
     files.foreach(f => logger.info(f))
-    job.sc.textFile(files.mkString(",")).map(PString)
+    if (files.isEmpty) {
+      job.sc.emptyRDD[PValue]
+    } else {
+      job.sc.textFile(files.mkString(",")).map(PString)
+    }
   }
 }
