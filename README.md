@@ -4,6 +4,8 @@
 
 Parsek designed for parse, validate and transform log files in different formats. It can be used as a library or standalone [Apache Spark](https://spark.apache.org) application.
 
+### [Documentation](https://github.com/andr83/parsek/wiki)
+
 ##Overview
 
 ![Parsek workflow](https://lh3.googleusercontent.com/tVOLaNiDTV6RKignddM5IKlRcw7HZyvBekm4lQwjbHJqxMJEohDsdfvjmc-Sjc-znE36AobGqhDptfTWm3uPf1r-r9xopEizubPAhIbGmwMAHrCjJ7jlHOQ0aKS080uvg8EyeuKlVhtmJLGfr0wG8-QQ3zttdk023eQGY37BRVCId72PbZ-tQ6VxlErXKvAvsQUlEJ5UdoMONo3bqmHhC3N2e62Drf7Jf2idFsBoERUQHNle3MHTHBgserE-EishfgS9M8svif1o1vr969haL7soJ9_NtdJS7-Ba3llf7ET_HgTCygnCqkuI2smSVRiFI9HRfk3rPy2mD4KDPbpI7NgzDrLJj6pwsgkL6Um6EafVo0w0GC_l7DS2wTSeLs8ZoX8FXLaIIzL_Mpqf5MCiZOvRez64n-auTep6xx3YSDTHJJIAVQeLl4-naEAPvIIfh_-wan2EtksHeJ1Q0BbLeYWYAW4i3b9F_AJZjUY-NaVLLKCPmjvcO0HHWyQZSeaS26w4vGh71wr9_Bff4Jwco8GBeRaa-Veped4RGl0h-9l7SsZT8eQwbMlaxMMYeJ4db-Qrew=w929-h266-no)
