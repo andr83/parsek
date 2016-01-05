@@ -17,7 +17,7 @@ case class ParseJson(
 ) extends TransformPipe(field, as) {
 
   def this(config: Config) = this(
-    field = config.as[String]("field").asFieldPath,
+    field = config.as[Option[String]]("field").getOrElse("").asFieldPath,
     as = config.as[Option[String]]("as").map(_.asFieldPath)
   )
 
