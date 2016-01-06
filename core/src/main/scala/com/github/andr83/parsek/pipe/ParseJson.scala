@@ -31,7 +31,7 @@ case class ParseJson(
     case JDouble(num) => PDouble(num)
     case JDecimal(num) => PDouble(num.toDouble)
     case JInt(num) => PLong(num.toLong)
-    case JLong(num) => PLong(num)
+//    case JLong(num) => PLong(num)
     case JBool(b) => PBool(b)
     case JObject(fields) =>
       PMap(fields.filter {

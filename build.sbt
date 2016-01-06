@@ -5,7 +5,9 @@ val guavaVersion = "14.0"
 val hadoopVersion = "2.3.+"
 val jacksonCoreVersion = "2.4.4"
 val jacksonVersion = "2.6.1"
-val json4SVersion = "3.3.+"
+val javaxServletVersion = "3.0.1"
+val json4SVersion = "3.2.10"
+val ficusVersion = "1.0.1"
 val openCsvVersion = "3.4"
 val playJsonVersion = "2.4.3"
 val scalaArmVersion = "1.4"
@@ -14,7 +16,8 @@ val scalaTestVersion = "2.2.+"
 val scalaTimeVersion = "1.8.+"
 val scoptVersion = "3.3.+"
 val slf4jVersion = "1.7.5"
-val sparkVersion = "1.3.+"
+val snappyJavaVersion = "1.1.2"
+val sparkVersion = "1.3.1"
 val typesafeConfigVersion = "1.2.+"
 
 lazy val commonSettings = Seq(
@@ -26,7 +29,10 @@ lazy val commonSettings = Seq(
   externalResolvers := Seq(
     "Maven Central Server" at "http://repo1.maven.org/maven2",
     "Sonatype OSS Releases"  at "http://oss.sonatype.org/content/repositories/releases/"
-  ),
+  )
+)
+
+lazy val assemblySettings = Seq(
   assemblyMergeStrategy in assembly := {
     case PathList("javax", "servlet", xs@_*) => MergeStrategy.last
     case PathList("javax", xs@_*) => MergeStrategy.last
@@ -50,7 +56,7 @@ lazy val commonSettings = Seq(
 val jacksonCoreExclusion = ExclusionRule("com.fasterxml.jackson.core")
 val guavaExclusion = ExclusionRule("com.google.guava", "guava")
 val sparkExclusions = Seq(
-  jacksonCoreExclusion,
+//  jacksonCoreExclusion,
   guavaExclusion,
   ExclusionRule("org.apache.hadoop"),
   ExclusionRule("org.apache.hbase"),
@@ -74,7 +80,7 @@ val hadoopDependencies = Seq(
 )
 
 lazy val parsek = project.in(file("."))
-  .aggregate(core, spark)
+  .aggregate(core, spark, sql, assemblyProject)
 
 lazy val core = project
   .settings(commonSettings: _*)
@@ -90,12 +96,13 @@ lazy val core = project
       "com.opencsv" % "opencsv" % openCsvVersion,
       "com.jsuereth" %% "scala-arm" % scalaArmVersion,
       "com.github.nscala-time" %% "nscala-time" % scalaTimeVersion,
-      "javax.servlet" % "javax.servlet-api" % "3.0.1",
-      "org.xerial.snappy" % "snappy-java" % "1.1.2",
-      "net.ceedubs" %% "ficus" % "1.0.1",
+      "javax.servlet" % "javax.servlet-api" % javaxServletVersion,
+      "org.xerial.snappy" % "snappy-java" % snappyJavaVersion,
+      "net.ceedubs" %% "ficus" % ficusVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ) ++ hadoopDependencies
   )
+  .disablePlugins(sbtassembly.AssemblyPlugin)
 
 lazy val spark = project
   .settings(commonSettings: _*)
@@ -105,9 +112,35 @@ lazy val spark = project
       "com.github.scopt" %% "scopt" % scoptVersion,
       "org.apache.spark" %% "spark-core" % sparkVersion
         excludeAll (sparkExclusions: _*),
+      "org.apache.spark" %% "spark-hive" % sparkVersion
+        excludeAll (sparkExclusions: _*),
       "org.apache.spark" %% "spark-streaming" % sparkVersion
         excludeAll (sparkExclusions: _*),
       "org.apache.spark" %% "spark-streaming-kafka" % sparkVersion
         excludeAll (sparkExclusions: _*)
     )
-  ).dependsOn(core)
+  )
+  .dependsOn(core)
+  .disablePlugins(sbtassembly.AssemblyPlugin)
+
+lazy val sql = project
+  .settings(commonSettings: _*)
+  .settings(
+    name := "parsek-sql",
+    libraryDependencies ++= hadoopDependencies ++ Seq(
+      "org.apache.spark" %% "spark-sql" % sparkVersion
+        excludeAll (sparkExclusions: _*),
+      "org.apache.spark" %% "spark-hive" % sparkVersion
+    )
+  )
+  .dependsOn(spark)
+  .disablePlugins(sbtassembly.AssemblyPlugin)
+
+lazy val assemblyProject = project
+  .settings(commonSettings: _*)
+  .settings(assemblySettings: _*)
+  .settings(
+    name := "parsek-assembly",
+    assemblyJarName in assembly := s"parsek-assembly-${version.value}.jar"
+  )
+  .dependsOn(sql)

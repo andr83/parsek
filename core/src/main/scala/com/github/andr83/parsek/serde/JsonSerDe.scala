@@ -28,7 +28,7 @@ case class JsonSerDe(config: Config) extends SerDe {
   def convertToJson(value: PValue): JValue = value match {
     case PString(str) => JString(str)
     case PInt(num) => JInt(num)
-    case PLong(num) => JLong(num)
+    case PLong(num) => JInt(num)//JLong(num)
     case PDouble(num) => JDouble(num)
     case PBool(num) => JBool(num)
     case PDate(date) => convertToJson(timeFormatter.format(date))
@@ -41,7 +41,7 @@ case class JsonSerDe(config: Config) extends SerDe {
     case JDouble(num) => PDouble(num)
     case JDecimal(num) => PDouble(num.toDouble)
     case JInt(num) => PLong(num.toLong)
-    case JLong(num) => PLong(num)
+//    case JLong(num) => PLong(num)
     case JBool(b) => PBool(b)
     case JObject(obj) =>
       PMap(obj.filter {
