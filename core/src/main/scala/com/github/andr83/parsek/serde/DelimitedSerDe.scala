@@ -16,6 +16,7 @@ import scala.util.control.NonFatal
  * @author andr83
  */
 trait DelimitedSerDeTrait extends SerDe {
+  val config: Config
   val fields: List[FieldType] =
     try {
       config.as[List[String]]("fields") map (f => StringField(f))
@@ -33,7 +34,7 @@ trait DelimitedSerDeTrait extends SerDe {
 
   val timeFormatter = DateFormatter(config.as[Option[String]]("timeFormat"))
 
-  lazy val jsonSerDe = JsonSerDe(config)
+  lazy val jsonSerDe = JsonSerDe(fields=None, timeFormatter)
   lazy val parser = new CSVParser(delimiter, enclosure, escape)
 
   def convertToDelimited(value: PValue, field: FieldType, level: Int = 2): String = field match {

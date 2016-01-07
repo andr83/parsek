@@ -1,52 +1,15 @@
 package com.github.andr83.parsek.spark
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.resources.ResourceFactory
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import org.apache.commons.io.IOUtils
 import org.apache.spark.rdd.RDD
-import resource._
-
-import scala.collection.JavaConversions._
 
 /**
   * @author andr83
   */
 object ParsekJob extends SparkJob {
-
-  var config = ConfigFactory.empty()
-
-  opt[String]('c', "config") required() foreach { path =>
-    config = if (path.startsWith("hdfs://")) {
-      (for (
-        in <- managed(fs.open(path))
-      ) yield IOUtils.toString(in)).either match {
-        case Right(content) => ConfigFactory.parseString(content)
-        case Left(errors) => throw errors.head
-      }
-    } else {
-      ConfigFactory.parseFile(path)
-    }
-  } text "Configuration file path. Support local and hdfs"
-
-  lazy val resourceFactory = ResourceFactory()
-
-
-  override def beforeJob(): Unit = {
-    super.beforeJob()
-    config.as[Option[Config]]("resources") foreach (resources => {
-      val res = resources.root().unwrapped().keySet() map (key => {
-        key -> resourceFactory.read(resources.getValue(key)).value
-      })
-      if (res.nonEmpty) {
-        val newConfig = ConfigFactory.parseMap(mapAsJavaMap(Map("resources" -> mapAsJavaMap(res.toMap))))
-        config = newConfig.withFallback(config)
-      }
-    })
-    config = config.resolve()
-  }
 
   override def job(): Unit = {
     val startTime = System.currentTimeMillis()

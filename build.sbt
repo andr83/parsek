@@ -80,7 +80,7 @@ val hadoopDependencies = Seq(
 )
 
 lazy val parsek = project.in(file("."))
-  .aggregate(core, spark, sql, assemblyProject)
+  .aggregate(core, spark, sql, streaming, assemblyProject)
 
 lazy val core = project
   .settings(commonSettings: _*)
@@ -111,12 +111,6 @@ lazy val spark = project
     libraryDependencies ++= hadoopDependencies ++ Seq(
       "com.github.scopt" %% "scopt" % scoptVersion,
       "org.apache.spark" %% "spark-core" % sparkVersion
-        excludeAll (sparkExclusions: _*),
-      "org.apache.spark" %% "spark-hive" % sparkVersion
-        excludeAll (sparkExclusions: _*),
-      "org.apache.spark" %% "spark-streaming" % sparkVersion
-        excludeAll (sparkExclusions: _*),
-      "org.apache.spark" %% "spark-streaming-kafka" % sparkVersion
         excludeAll (sparkExclusions: _*)
     )
   )
@@ -136,6 +130,22 @@ lazy val sql = project
   .dependsOn(spark)
   .disablePlugins(sbtassembly.AssemblyPlugin)
 
+lazy val streaming = project
+  .settings(commonSettings: _*)
+  .settings(
+    name := "parsek-streaming",
+    libraryDependencies ++= hadoopDependencies ++ Seq(
+      "org.apache.spark" %% "spark-streaming" % sparkVersion
+        excludeAll (sparkExclusions: _*),
+      "org.apache.spark" %% "spark-streaming-kafka" % sparkVersion
+        excludeAll (sparkExclusions: _*),
+      "org.apache.spark" %% "spark-streaming-flume" % sparkVersion
+        excludeAll (sparkExclusions: _*)
+    )
+  )
+  .dependsOn(spark)
+  .disablePlugins(sbtassembly.AssemblyPlugin)
+
 lazy val assemblyProject = project
   .settings(commonSettings: _*)
   .settings(assemblySettings: _*)
@@ -143,4 +153,4 @@ lazy val assemblyProject = project
     name := "parsek-assembly",
     assemblyJarName in assembly := s"parsek-assembly-${version.value}.jar"
   )
-  .dependsOn(sql)
+  .dependsOn(core, spark, sql, streaming)

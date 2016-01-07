@@ -1,4 +1,4 @@
-package com.github.andr83.parsek.spark.sink
+package com.github.andr83.parsek.spark.streaming.sink
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.meta._
@@ -40,7 +40,7 @@ case class HiveSink(
     val sqlContext = new org.apache.spark.sql.hive.HiveContext(rdd.context)
 
     var jsonRdd = rdd.mapPartitions(it => {
-      val ser = JsonSerDe(Map.empty[String, String])
+      val ser = JsonSerDe()
       it.map(v => new String(ser.write(v).map(_.toChar)))
     })
 

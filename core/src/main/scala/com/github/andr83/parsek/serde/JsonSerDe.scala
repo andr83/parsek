@@ -9,9 +9,15 @@ import org.json4s.jackson.JsonMethods.{compact, parse => jsonParse, render}
 /**
  * @author andr83
  */
-case class JsonSerDe(config: Config) extends SerDe {
-  val fields = config.as[Option[List[String]]]("fields")
-  val timeFormatter = DateFormatter(config.as[Option[String]]("timeFormat"))
+case class JsonSerDe(
+  fields: Option[FieldPath],
+  timeFormatter: DateFormatter
+) extends SerDe {
+
+  def this(config: Config) = this(
+      fields = config.as[Option[List[String]]]("fields"),
+      timeFormatter = DateFormatter(config.as[Option[String]]("timeFormat"))
+  )
 
   override def write(value: PValue): Array[Byte] = fields match {
     case Some(fs) =>
@@ -57,4 +63,8 @@ case class JsonSerDe(config: Config) extends SerDe {
       }.map(convertFromJson))
     case _ => throw new IllegalStateException(s"Unexpected value parsing json $json")
   }
+}
+
+object JsonSerDe {
+  def apply(): JsonSerDe = JsonSerDe(None, DateFormatter(None))
 }

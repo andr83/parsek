@@ -2,14 +2,20 @@ package com.github.andr83.parsek.spark
 
 import java.io.File
 
+import com.github.andr83.parsek.resources.ResourceFactory
 import com.github.andr83.parsek.spark.PathFilter.PathFilter
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.slf4j.LazyLogging
+import net.ceedubs.ficus.Ficus._
+import org.apache.commons.io.IOUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
+import resource._
 import scopt.{OptionDef, Read}
 
+import scala.collection.JavaConversions._
 import scala.language.implicitConversions
 
 /**
@@ -59,10 +65,13 @@ abstract class SparkJob extends LazyLogging {
     conf
   }
 
+  lazy val resourceFactory = ResourceFactory()
+
   var sparkMemory = "1G"
   var sparkMaster = "local[2]"
   var sparkLogLevel = Level.WARN
   var hadoopConfigDirectory = ""
+  var config = ConfigFactory.empty()
 
   opt[String]("sparkMemory") foreach {
     sparkMemory = _
@@ -83,6 +92,19 @@ abstract class SparkJob extends LazyLogging {
   opt[String]("hadoopConfigDirectory") foreach {
     hadoopConfigDirectory = _
   } text "Path to hadoop config directory with core-site.xml and hdfs-site.xml files"
+
+  opt[String]('c', "config") required() foreach { path =>
+    config = if (path.startsWith("hdfs://")) {
+      (for (
+        in <- managed(fs.open(path))
+      ) yield IOUtils.toString(in)).either match {
+        case Right(content) => ConfigFactory.parseString(content)
+        case Left(errors) => throw errors.head
+      }
+    } else {
+      ConfigFactory.parseFile(path)
+    }
+  } text "Configuration file path. Support local and hdfs"
 
   /**
     * List recursively all files from path
@@ -117,7 +139,18 @@ abstract class SparkJob extends LazyLogging {
     afterJob()
   }
 
-  def beforeJob() = {}
+  def beforeJob(): Unit = {
+    config.as[Option[Config]]("resources") foreach (resources => {
+      val res = resources.root().unwrapped().keySet() map (key => {
+        key -> resourceFactory.read(resources.getValue(key)).value
+      })
+      if (res.nonEmpty) {
+        val newConfig = ConfigFactory.parseMap(mapAsJavaMap(Map("resources" -> mapAsJavaMap(res.toMap))))
+        config = newConfig.withFallback(config)
+      }
+    })
+    config = config.resolve()
+  }
 
   def afterJob() = {}
 

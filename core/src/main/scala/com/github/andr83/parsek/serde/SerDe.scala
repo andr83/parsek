@@ -16,9 +16,7 @@ trait Deserializer {
   def read(value: Array[Byte]): PValue
 }
 
-abstract class SerDe extends Serializer with Deserializer with LazyLogging {
-  val config: Config
-}
+abstract class SerDe extends Serializer with Deserializer with LazyLogging
 
 object SerDe {
   def apply(config: Config): SerDe = {
