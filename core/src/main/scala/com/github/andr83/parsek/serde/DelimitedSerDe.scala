@@ -5,6 +5,7 @@ import java.io.StringWriter
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.formatter.DateFormatter
 import com.github.andr83.parsek.meta._
+import com.github.andr83.parsek.serde.DelimitedSerDeTrait._
 import com.opencsv.{CSVParser, CSVWriter}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
@@ -17,23 +18,15 @@ import scala.util.control.NonFatal
  * @author andr83
  */
 trait DelimitedSerDeTrait extends SerDe {
-  val config: Config
-  val fields: List[FieldType] =
-    try {
-      config.as[List[String]]("fields") map (f => StringField(f))
-    } catch {
-      case _: Throwable => config.as[List[FieldType]]("fields")
-    }
-
-  val enclosure: Char = config.as[Option[Char]]("enclosure").getOrElse('"')
-  val escape: Char = config.as[Option[Char]]("escape").getOrElse('\\')
-  val delimiter: Char = config.as[Option[Char]]("delimiter").getOrElse(1)
-  val listDelimiter: Char = config.as[Option[Char]]("listDelimiter").getOrElse(2)
-  val mapFieldDelimiter: Char = config.as[Option[Char]]("mapFieldDelimiter").getOrElse(3)
-  val nullValue: String = config.as[Option[String]]("nullValue").getOrElse("")
-  val multiLine: Boolean = config.as[Option[Boolean]]("multiLine").getOrElse(false)
-
-  val timeFormatter = DateFormatter(config.as[Option[String]]("timeFormat"))
+  val fields: Seq[FieldType]
+  val enclosure: Char
+  val escape: Char
+  val delimiter: Char
+  val listDelimiter: Char
+  val mapFieldDelimiter: Char
+  val nullValue: String
+  val multiLine: Boolean
+  val timeFormatter: DateFormatter
 
   lazy val jsonSerDe = JsonSerDe(fields=None, timeFormatter)
   lazy val parser = new CSVParser(delimiter, enclosure, escape)
@@ -168,23 +161,108 @@ trait DelimitedSerDeTrait extends SerDe {
   override def read(value: Array[Byte]): PValue = read(value.asStr)
 }
 
-case class DelimitedSerDe(config: Config) extends DelimitedSerDeTrait
+object DelimitedSerDeTrait {
+  val DefaultEnclosure: Char = '"'
+  val DefaultEscape: Char = '\\'
+  val DefaultDelimiter: Char = 1
+  val DefaultListDelimiter: Char = 2
+  val DefaultMapFieldDelimiter: Char = 3
+  val DefaultNullValue: String = ""
+  val DefaultMultiLine: Boolean = false
+  val DefaultTimeFormat = None
 
-case class CsvSerDe(config: Config) extends DelimitedSerDeTrait {
-  override val delimiter = ','
-  override val listDelimiter = '|'
-  override val mapFieldDelimiter = ':'
+  def getFields(config: Config): Seq[FieldType] = try {
+    config.as[List[String]]("fields") map (f => StringField(f))
+  } catch {
+    case _: Throwable => config.as[List[FieldType]]("fields")
+  }
 }
 
-case class TsvSerDe(config: Config) extends DelimitedSerDeTrait {
-  override val delimiter = '\t'
-  override val listDelimiter = '|'
-  override val mapFieldDelimiter = ':'
+case class DelimitedSerDe(
+  fields: Seq[FieldType],
+  enclosure: Char = DefaultEnclosure,
+  escape: Char = DefaultEscape,
+  delimiter: Char = DefaultDelimiter,
+  listDelimiter: Char = DefaultListDelimiter,
+  mapFieldDelimiter: Char = DefaultMapFieldDelimiter,
+  nullValue: String = DefaultNullValue,
+  multiLine: Boolean = DefaultMultiLine,
+  timeFormatter: DateFormatter = DateFormatter(DefaultTimeFormat)
+) extends DelimitedSerDeTrait {
+  def this(config: Config) = this (
+    fields = getFields(config),
+    enclosure = config.as[Option[Char]]("enclosure").getOrElse(DefaultEnclosure),
+    escape = config.as[Option[Char]]("escape").getOrElse(DefaultEscape),
+    delimiter = config.as[Option[Char]]("delimiter").getOrElse(DefaultDelimiter),
+    listDelimiter = config.as[Option[Char]]("listDelimiter").getOrElse(DefaultListDelimiter),
+    mapFieldDelimiter = config.as[Option[Char]]("mapFieldDelimiter").getOrElse(DefaultMapFieldDelimiter),
+    nullValue = config.as[Option[String]]("nullValue").getOrElse(DefaultNullValue),
+    multiLine = config.as[Option[Boolean]]("multiLine").getOrElse(DefaultMultiLine),
+    timeFormatter = DateFormatter(config.as[Option[String]]("timeFormat"))
+  )
 }
 
-case class HiveTsvSerDe(config: Config) extends DelimitedSerDeTrait {
-  override val delimiter = '\t'
-  override val listDelimiter = '|'
-  override val mapFieldDelimiter = ':'
-  override val enclosure = CSVWriter.NO_ESCAPE_CHARACTER
+case class CsvSerDe(
+  fields: Seq[FieldType],
+  enclosure: Char = DefaultEnclosure,
+  escape: Char = DefaultEscape,
+  nullValue: String = DefaultNullValue,
+  multiLine: Boolean = DefaultMultiLine,
+  timeFormatter: DateFormatter = DateFormatter(DefaultTimeFormat)
+) extends DelimitedSerDeTrait {
+  def this(config: Config) = this (
+    fields = getFields(config),
+    enclosure = config.as[Option[Char]]("enclosure").getOrElse(DefaultEnclosure),
+    escape = config.as[Option[Char]]("escape").getOrElse(DefaultEscape),
+    nullValue = config.as[Option[String]]("nullValue").getOrElse(DefaultNullValue),
+    multiLine = config.as[Option[Boolean]]("multiLine").getOrElse(DefaultMultiLine),
+    timeFormatter = DateFormatter(config.as[Option[String]]("timeFormat"))
+  )
+
+  val delimiter = ','
+  val listDelimiter = '|'
+  val mapFieldDelimiter = ':'
+}
+
+case class TsvSerDe(
+  fields: Seq[FieldType],
+  enclosure: Char = DefaultEnclosure,
+  escape: Char = DefaultEscape,
+  nullValue: String = DefaultNullValue,
+  multiLine: Boolean = DefaultMultiLine,
+  timeFormatter: DateFormatter = DateFormatter(DefaultTimeFormat)
+) extends DelimitedSerDeTrait {
+  def this(config: Config) = this (
+    fields = getFields(config),
+    enclosure = config.as[Option[Char]]("enclosure").getOrElse(DefaultEnclosure),
+    escape = config.as[Option[Char]]("escape").getOrElse(DefaultEscape),
+    nullValue = config.as[Option[String]]("nullValue").getOrElse(DefaultNullValue),
+    multiLine = config.as[Option[Boolean]]("multiLine").getOrElse(DefaultMultiLine),
+    timeFormatter = DateFormatter(config.as[Option[String]]("timeFormat"))
+  )
+
+  val delimiter = '\t'
+  val listDelimiter = '|'
+  val mapFieldDelimiter = ':'
+}
+
+case class HiveTsvSerDe (
+  fields: Seq[FieldType],
+  escape: Char = DefaultEscape,
+  nullValue: String = DefaultNullValue,
+  multiLine: Boolean = DefaultMultiLine,
+  timeFormatter: DateFormatter = DateFormatter(DefaultTimeFormat)
+) extends DelimitedSerDeTrait {
+  def this(config: Config) = this (
+    fields = getFields(config),
+    escape = config.as[Option[Char]]("escape").getOrElse(DefaultEscape),
+    nullValue = config.as[Option[String]]("nullValue").getOrElse(DefaultNullValue),
+    multiLine = config.as[Option[Boolean]]("multiLine").getOrElse(DefaultMultiLine),
+    timeFormatter = DateFormatter(config.as[Option[String]]("timeFormat"))
+  )
+
+  val delimiter = '\t'
+  val listDelimiter = '|'
+  val mapFieldDelimiter = ':'
+  val enclosure = CSVWriter.NO_ESCAPE_CHARACTER
 }
