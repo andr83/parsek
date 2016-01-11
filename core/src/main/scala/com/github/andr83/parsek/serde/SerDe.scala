@@ -1,6 +1,6 @@
 package com.github.andr83.parsek.serde
 
-import com.github.andr83.parsek.PValue
+import com.github.andr83.parsek._
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import net.ceedubs.ficus.Ficus._
@@ -10,6 +10,12 @@ import net.ceedubs.ficus.Ficus._
  */
 trait Serializer {
   def write(value: PValue): Array[Byte]
+}
+
+object StringSerializer extends Serializer {
+  def write(value: PValue): Array[Byte] = value.toString.asBytes
+
+  def factory() = StringSerializer
 }
 
 trait Deserializer {

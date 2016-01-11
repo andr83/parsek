@@ -1,6 +1,7 @@
 package com.github.andr83.parsek.serde
 
 import com.github.andr83.parsek._
+import com.github.andr83.parsek.formatter.DateFormatter
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.json4s._

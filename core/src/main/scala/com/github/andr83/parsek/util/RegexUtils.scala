@@ -8,7 +8,7 @@ import scala.util.matching.Regex
 /**
   * @author andr83
   */
-object RegexUtil {
+object RegexUtils {
 
   /**
     * Return all name groups from regex

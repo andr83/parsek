@@ -1,7 +1,7 @@
 package com.github.andr83.parsek.pipe
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.util.RegexUtil
+import com.github.andr83.parsek.util.RegexUtils
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
@@ -28,7 +28,7 @@ case class ParseRegex(
     as = config.as[Option[String]]("as").map(_.asFieldPath)
   )
 
-  val namedGroups = RegexUtil.getNamedGroups(pattern)
+  val namedGroups = RegexUtils.getNamedGroups(pattern)
 
   override def transformString(str: String)(implicit context: PipeContext): Option[PValue] = for (
     m <- pattern.findFirstMatchIn(str)

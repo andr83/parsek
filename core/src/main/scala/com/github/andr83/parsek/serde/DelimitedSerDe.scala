@@ -3,6 +3,7 @@ package com.github.andr83.parsek.serde
 import java.io.StringWriter
 
 import com.github.andr83.parsek._
+import com.github.andr83.parsek.formatter.DateFormatter
 import com.github.andr83.parsek.meta._
 import com.opencsv.{CSVParser, CSVWriter}
 import com.typesafe.config.Config

@@ -1,14 +1,15 @@
-package com.github.andr83.parsek
+package com.github.andr83.parsek.formatter
 
 import java.util.Locale
 
+import com.github.andr83.parsek._
 import com.github.nscala_time.time.Imports._
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 
 /**
  * @author andr83
  */
-trait DateFormatter {
+trait DateFormatter extends Serializable {
   def format(date: DateTime): PValue
   def parse(value: PValue): PDate
 }
@@ -27,7 +28,8 @@ object TimestampFormatter extends DateFormatter {
   }
 }
 
-class JodaDateFormatter(formatter: DateTimeFormatter) extends DateFormatter {
+class JodaDateFormatter(formatterFactory: () => DateTimeFormatter) extends DateFormatter {
+  val formatter = formatterFactory()
   override def format(date: DateTime): PString = date.toString(formatter)
 
   override def parse(value: PValue): PDate = value match {
@@ -42,7 +44,7 @@ object DateFormatter {
 
   def apply(pattern: Option[String], timeZone: Option[DateTimeZone] = None): DateFormatter = pattern match {
     case Some("timestamp") => TimestampFormatter
-    case Some(str) => new JodaDateFormatter(DateTimeFormat.forPattern(str).withLocale(Locale.ENGLISH))
-    case None => new JodaDateFormatter(DateTimeFormat.forPattern(DefaultDatePattern).withLocale(Locale.ENGLISH))
+    case Some(str) => new JodaDateFormatter(() => DateTimeFormat.forPattern(str).withLocale(Locale.ENGLISH))
+    case None => new JodaDateFormatter(() => DateTimeFormat.forPattern(DefaultDatePattern).withLocale(Locale.ENGLISH))
   }
 }

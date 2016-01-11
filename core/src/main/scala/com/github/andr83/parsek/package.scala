@@ -51,6 +51,7 @@ package object parsek {
   type FieldType = Field[_ <: PValue]
   type FieldPath = Seq[String]
 
+//  implicit val configValueReader = ParsekConfig.configValueReader
   implicit val fieldConfigReader = ParsekConfig.fieldConfigReader
   implicit val dateConfigReader = ParsekConfig.dateConfigReader
   implicit val pipeConfigReader = ParsekConfig.pipeConfigReader

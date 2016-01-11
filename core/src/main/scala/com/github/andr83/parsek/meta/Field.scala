@@ -1,6 +1,8 @@
 package com.github.andr83.parsek.meta
 
 import com.github.andr83.parsek._
+import com.github.andr83.parsek.formatter.DateFormatter
+
 //import com.github.andr83.parsek.ParsekConfig._
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config

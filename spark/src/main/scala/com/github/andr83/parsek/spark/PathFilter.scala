@@ -1,7 +1,8 @@
 package com.github.andr83.parsek.spark
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.util.RegexUtil
+import com.github.andr83.parsek.formatter.DateFormatter
+import com.github.andr83.parsek.util.RegexUtils
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.slf4j.LazyLogging
@@ -49,7 +50,7 @@ object PathFilter {
       pattern = config.as[String]("pattern").r
     )
 
-    val dateGroupIdx = RegexUtil.getNamedGroups(pattern).getOrElse("time",
+    val dateGroupIdx = RegexUtils.getNamedGroups(pattern).getOrElse("time",
       throw new IllegalStateException("TimeFilter pattern must contain \"time\" group"))
 
     def apply(path: Path): Boolean = {

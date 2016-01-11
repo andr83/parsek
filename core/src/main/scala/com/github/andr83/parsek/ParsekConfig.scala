@@ -1,8 +1,9 @@
 package com.github.andr83.parsek
 
+import com.github.andr83.parsek.formatter.DateFormatter
 import com.github.andr83.parsek.meta._
 import com.github.nscala_time.time.Imports._
-import com.typesafe.config.{Config, ConfigException}
+import com.typesafe.config.{Config, ConfigException, ConfigValue}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
 
@@ -13,6 +14,11 @@ import scala.util.matching.Regex
  * @author andr83
  */
 object ParsekConfig {
+
+  implicit val configValueReader: ValueReader[ConfigValue] = new ValueReader[ConfigValue] {
+    def read(config: Config, path: String): ConfigValue = config.getValue(path)
+  }
+
   implicit val fieldConfigReader: ValueReader[FieldType] = ValueReader.relative(config => {
     Field.apply(config)
   })

@@ -1,4 +1,4 @@
-package com.github.andr83.parsek.spark.streaming.sink
+package com.github.andr83.parsek.spark.sink
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.meta._
