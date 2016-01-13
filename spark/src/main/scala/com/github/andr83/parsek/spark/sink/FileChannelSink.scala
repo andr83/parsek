@@ -41,7 +41,9 @@ case class FileChannelSink(
     serializer = config.as[Option[Config]]("serializer")
       .map(serializerConf => () => SerDe(serializerConf))
       .getOrElse(StringSerializer.factory),
-    partitions = FieldFormatter(config.getList("partitions")),
+    partitions = if (config.hasPath("partitions"))
+      FieldFormatter(config.getList("partitions"))
+    else Seq.empty[FieldFormatter],
     fileNamePattern = config.as[Option[String]]("fileNamePattern"),
     rollSize = config.as[Option[Long]]("rollSize").getOrElse(0L)
   )

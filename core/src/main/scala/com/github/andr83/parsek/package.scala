@@ -41,6 +41,45 @@ package object parsek {
     def asStr: String = new String(arr.map(_.toChar))
   }
 
+  implicit class RichPValue(val pv: PValue) extends AnyVal {
+    def getString(name: String = ""): Option[String] = pv match {
+      case PMap(map) => map.getValue(name.asFieldPath).map(_.value.toString)
+      case _ if name == "" => Some(pv.value.toString)
+      case v => throw new IllegalStateException(s"Can not get String value $name from ${v.getClass.getSimpleName}")
+    }
+
+    def getInt(name: String = ""): Option[Int] = pv match {
+      case PMap(map) => map.getValue(name.asFieldPath).map(_.asInstanceOf[PInt].value)
+      case PInt(v) => Some(v)
+      case v => throw new IllegalStateException(s"Can not get String value $name from ${v.getClass.getSimpleName}")
+    }
+
+    def getLong(name: String = ""): Option[Long] = pv match {
+      case PMap(map) => map.getValue(name.asFieldPath).map(_.asInstanceOf[PLong].value)
+      case PLong(v) => Some(v)
+      case PInt(v) => Some(v.toLong)
+      case v => throw new IllegalStateException(s"Can not get String value $name from ${v.getClass.getSimpleName}")
+    }
+
+    def getDouble(name: String = ""): Option[Double] = pv match {
+      case PMap(map) => map.getValue(name.asFieldPath).map(_.asInstanceOf[PDouble].value)
+      case PDouble(v) => Some(v)
+      case v => throw new IllegalStateException(s"Can not get String value $name from ${v.getClass.getSimpleName}")
+    }
+
+    def getBool(name: String = ""): Option[Boolean] = pv match {
+      case PMap(map) => map.getValue(name.asFieldPath).map(_.asInstanceOf[PBool].value)
+      case PBool(v) => Some(v)
+      case v => throw new IllegalStateException(s"Can not get String value $name from ${v.getClass.getSimpleName}")
+    }
+
+    def getDate(name: String = ""): Option[DateTime] = pv match {
+      case PMap(map) => map.getValue(name.asFieldPath).map(_.asInstanceOf[PDate].value)
+      case PDate(v) => Some(v)
+      case v => throw new IllegalStateException(s"Can not get String value $name from ${v.getClass.getSimpleName}")
+    }
+  }
+
   case class IntCounter(var count: Int = 0) extends Serializable {
     def +=(inc: Int): IntCounter = {
       count += inc
@@ -50,6 +89,7 @@ package object parsek {
 
   type FieldType = Field[_ <: PValue]
   type FieldPath = Seq[String]
+  type PValuePredicate = PValue => Boolean
 
 //  implicit val configValueReader = ParsekConfig.configValueReader
   implicit val fieldConfigReader = ParsekConfig.fieldConfigReader

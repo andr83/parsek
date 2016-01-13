@@ -19,11 +19,12 @@ val slf4jVersion = "1.7.5"
 val snappyJavaVersion = "1.1.2"
 val sparkVersion = "1.3.1"
 val typesafeConfigVersion = "1.2.+"
+val twitterUtilVersion = "6.27.0"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
   version := "0.1.0",
-  scalaVersion := "2.10.5",
+  scalaVersion := "2.10.4",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers += Resolver.sonatypeRepo("releases"),
   externalResolvers := Seq(
@@ -86,6 +87,11 @@ lazy val core = project
   .settings(commonSettings: _*)
   .settings(
     name := "parsek-core",
+    dependencyOverrides ++= Set(
+      "org.scala-lang" % "scala-library" % scalaVersion.value,
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value
+    ),
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "org.slf4j" % "slf4j-simple" % slf4jVersion % "test",
@@ -111,7 +117,8 @@ lazy val spark = project
     libraryDependencies ++= hadoopDependencies ++ Seq(
       "com.github.scopt" %% "scopt" % scoptVersion,
       "org.apache.spark" %% "spark-core" % sparkVersion
-        excludeAll (sparkExclusions: _*)
+        excludeAll (sparkExclusions: _*),
+      "com.twitter"      %% "util-eval" % twitterUtilVersion
     )
   )
   .dependsOn(core)
