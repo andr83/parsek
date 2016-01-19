@@ -1,6 +1,6 @@
 package com.github.andr83.parsek.spark.streaming.source
 
-import com.github.andr83.parsek.spark.streaming.{StreamingJob, StreamingSource}
+import com.github.andr83.parsek.spark.streaming.StreamingJob
 import com.github.andr83.parsek.{PString, PValue}
 import com.typesafe.config.Config
 import kafka.serializer.StringDecoder

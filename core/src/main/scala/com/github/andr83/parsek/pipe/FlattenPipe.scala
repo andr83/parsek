@@ -12,7 +12,7 @@ import net.ceedubs.ficus.Ficus._
   *
   * @author andr83
   */
-case class Flatten(field: FieldPath, recursively: Boolean = true) extends Pipe {
+case class FlattenPipe(field: FieldPath, recursively: Boolean = true) extends Pipe {
 
   def this(config: Config) = this(
     field = config.as[String]("field").asFieldPath,
@@ -75,6 +75,6 @@ case class Flatten(field: FieldPath, recursively: Boolean = true) extends Pipe {
   } else flatten(fields, Map.empty[String, PValue], value)
 }
 
-object Flatten {
-  def apply(config: Config): Flatten = new Flatten(config)
+object FlattenPipe {
+  def apply(config: Config): FlattenPipe = new FlattenPipe(config)
 }

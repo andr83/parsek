@@ -22,7 +22,7 @@ class ParseJsonSpec extends FlatSpec with Matchers with Inside {
         | }
         |}
       """.stripMargin)
-    val parser = ParseJson()
+    val parser = ParseJsonPipe()
     val result = parser.run(json)
 
     result shouldBe Some(PMap(

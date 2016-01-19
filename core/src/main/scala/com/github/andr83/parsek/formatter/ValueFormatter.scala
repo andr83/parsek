@@ -45,7 +45,7 @@ object ValueFormatter {
       .getOrElse(throw new IllegalStateException("Partition config should have type property"))
     val className = if (partitionType.contains(".")) partitionType
     else
-      "com.github.andr83.parsek.formatter." + partitionType.head.toUpper + partitionType.substring(1) + "Formatter"
+      getClass.getPackage.getName + "." + partitionType.head.toUpper + partitionType.substring(1) + "Formatter"
     val constructor = Class.forName(className).getConstructor(classOf[Config])
     constructor.newInstance(config).asInstanceOf[ValueFormatter]
   }

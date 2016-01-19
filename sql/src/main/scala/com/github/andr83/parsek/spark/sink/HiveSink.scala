@@ -1,35 +1,41 @@
 package com.github.andr83.parsek.spark.sink
 
+import java.util
+
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.meta._
 import com.github.andr83.parsek.serde.JsonSerDe
-import com.github.andr83.parsek.spark.Sink
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigException}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types._
-;
+
+import scala.collection.JavaConversions._
 
 /**
-  * Convdring RDD to Json DataFrame and execute hive query on it.
+  * Convert RDD to Json DataFrame and execute hive query on it.
   * DataFrame registered as temp table "sink_table" in hive
   *
-  * @param query Hive query to execute
+  * @param queries Hive query list to execute
   * @param fields sink_table schema
   * @param numPartitions count of result partitions
   *
   * @author andr83
   */
 case class HiveSink(
-  query: String,
+  queries: Seq[String],
   fields: List[FieldType],
   numPartitions: Int = 0
 ) extends Sink {
   import HiveSink._
 
   def this(config: Config) = this(
-    query = config.getString("query"),
+    queries = config.getAnyRef("query") match {
+      case q: String => Seq(q)
+      case qs: util.ArrayList[_] => qs.map(_.toString).toSeq
+      case _ => throw new ConfigException.BadValue("query", "Query must be a string or list of strings")
+    },
     fields = config.as[List[Config]]("fields") map Field.apply,
     numPartitions = config.as[Option[Int]]("numPartitions").getOrElse(0)
   )
@@ -51,8 +57,12 @@ case class HiveSink(
     val df = sqlContext.jsonRDD(jsonRdd, schema = schema)
     df.registerTempTable("sink_table")
 
-    logger.debug(s"Executing query: $query")
-    sqlContext.sql(query)
+    val fieldNames = fields map(_.asField) mkString ","
+    queries foreach (query=> {
+      val queryWithFields = query.replaceAllLiterally("${fields}", fieldNames)
+      logger.debug(s"Executing query: $queryWithFields")
+      sqlContext.sql(queryWithFields)
+    })
   }
 }
 

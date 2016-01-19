@@ -18,17 +18,17 @@ import net.ceedubs.ficus.Ficus._
   *
   * @author Andrei Tupitcyn
   */
-case class DecryptRsa(
+case class DecryptRsaPipe(
   privateKey: PrivateKey,
   field: FieldPath,
-  algorithm: String = DecryptRsa.DefaultAlgorithm,
+  algorithm: String = DecryptRsaPipe.DefaultAlgorithm,
   as: Option[FieldPath] = None
 ) extends TransformPipe(field, as) {
 
   def this(config: Config) = this(
-    privateKey = DecryptRsa.getPrivateKey(config.as[String]("privateKey").asBytes),
+    privateKey = DecryptRsaPipe.getPrivateKey(config.as[String]("privateKey").asBytes),
     field = config.as[String]("field").split('.').toSeq,
-    algorithm = config.as[Option[String]]("algorithm").getOrElse(DecryptRsa.DefaultAlgorithm),
+    algorithm = config.as[Option[String]]("algorithm").getOrElse(DecryptRsaPipe.DefaultAlgorithm),
     as = config.as[Option[String]]("as").map(_.asFieldPath)
   )
 
@@ -40,10 +40,10 @@ case class DecryptRsa(
   }
 }
 
-object DecryptRsa {
+object DecryptRsaPipe {
   val DefaultAlgorithm = "RSA/ECB/PKCS1Padding"
 
-  def apply(config: Config): DecryptRsa = new DecryptRsa(config)
+  def apply(config: Config): DecryptRsaPipe = new DecryptRsaPipe(config)
 
   def getPrivateKey(key: Array[Byte]): PrivateKey = {
     val spec = new PKCS8EncodedKeySpec(key)

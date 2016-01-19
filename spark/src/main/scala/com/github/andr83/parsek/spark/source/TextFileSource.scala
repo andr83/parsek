@@ -1,7 +1,7 @@
 package com.github.andr83.parsek.spark.source
 
 import com.github.andr83.parsek.spark.PathFilter.PathFilter
-import com.github.andr83.parsek.spark.{PathFilter, Source, SparkJob}
+import com.github.andr83.parsek.spark.{PathFilter, SparkJob}
 import com.github.andr83.parsek.{PString, PValue}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._

@@ -1,6 +1,7 @@
-package com.github.andr83.parsek.spark
+package com.github.andr83.parsek.spark.source
 
 import com.github.andr83.parsek._
+import com.github.andr83.parsek.spark.SparkJob
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import net.ceedubs.ficus.Ficus._
@@ -21,7 +22,7 @@ object Source {
       .getOrElse(throw new IllegalStateException("Source config should have type property"))
     val className = if (sourceType.contains(".")) sourceType
     else
-      "com.github.andr83.parsek.spark.source." + sourceType.head.toUpper + sourceType.substring(1) + "Source"
+      getClass.getPackage.getName + "." + sourceType.head.toUpper + sourceType.substring(1) + "Source"
     val constructor = Class.forName(className).getConstructor(classOf[Config])
     constructor.newInstance(config).asInstanceOf[Source]
   }

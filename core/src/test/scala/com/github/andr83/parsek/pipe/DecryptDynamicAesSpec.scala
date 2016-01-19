@@ -26,7 +26,7 @@ class DecryptDynamicAesSpec extends FlatSpec with Matchers with Inside {
     //Encrypt body message with AES
     val body = aesCipher.doFinal(rawBody.getBytes).asStr
 
-    val decryptor = DecryptDynamicAes(
+    val decryptor = DecryptDynamicAesPipe(
       aesKeyField = "aesKey".asFieldPath,
       field = "body".asFieldPath,
       algorithm = "AES/CBC/PKCS5Padding"
@@ -59,7 +59,7 @@ class DecryptDynamicAesSpec extends FlatSpec with Matchers with Inside {
     //Encrypt body message with AES
     val body = aesCipher.doFinal(rawBody.getBytes).asStr
 
-    val decryptor = DecryptDynamicAes(
+    val decryptor = DecryptDynamicAesPipe(
       aesKeyField = "aesKey".asFieldPath,
       field = "body".asFieldPath,
       algorithm = "AES/ECB/PKCS5Padding"

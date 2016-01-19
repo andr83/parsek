@@ -10,7 +10,7 @@ class FlattenSpec extends FlatSpec with Matchers {
   implicit val context = new PipeContext()
 
   "Embedded lists " should "be flatten only in field level" in {
-    val pipe = Flatten(field = "logs.data".asFieldPath, recursively = false)
+    val pipe = FlattenPipe(field = "logs.data".asFieldPath, recursively = false)
 
     val value = PMap("logs" ->
       PMap("data" -> PList(List(
@@ -40,7 +40,7 @@ class FlattenSpec extends FlatSpec with Matchers {
   }
 
   "Embedded lists " should "be flatten recursively" in {
-    val pipe = Flatten("logs.data".asFieldPath)
+    val pipe = FlattenPipe("logs.data".asFieldPath)
 
     val value = PMap("logs" ->
       PMap("data" ->

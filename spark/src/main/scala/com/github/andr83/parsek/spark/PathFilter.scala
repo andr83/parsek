@@ -88,7 +88,7 @@ object PathFilter {
       .getOrElse(throw new IllegalStateException("Path filter config must have type property"))
     val className = if (filterType.contains(".")) filterType
     else
-      "com.github.andr83.parsek.spark.PathFilter$" + filterType.head.toUpper + filterType.substring(1) + "Filter"
+      getClass.getName + filterType.head.toUpper + filterType.substring(1) + "Filter"
     val constructor = Class.forName(className).getConstructor(classOf[Config])
     constructor.newInstance(config).asInstanceOf[PathFilter]
   }

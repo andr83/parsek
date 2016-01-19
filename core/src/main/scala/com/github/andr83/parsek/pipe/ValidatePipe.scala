@@ -12,10 +12,10 @@ import scala.util.{Failure, Success, Try}
 /**
  * @author andr83
  */
-case class Validate(root: RecordField) extends Pipe {
+case class ValidatePipe(root: RecordField) extends Pipe {
 
   def this(config: Config) {
-    this(Validate.recordFieldFromConfig(config))
+    this(ValidatePipe.recordFieldFromConfig(config))
   }
 
   override def run(value: PValue)(implicit context: PipeContext): Option[PValue] = {
@@ -33,8 +33,8 @@ case class Validate(root: RecordField) extends Pipe {
   }
 }
 
-object Validate {
-  def apply(config: Config): Validate = new Validate(config)
+object ValidatePipe {
+  def apply(config: Config): ValidatePipe = new ValidatePipe(config)
 
   def recordFieldFromConfig(config: Config): RecordField = {
     RecordField(name = "root", fields = config.as[List[Config]]("fields") map Field.apply)

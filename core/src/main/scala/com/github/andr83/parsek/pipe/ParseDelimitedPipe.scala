@@ -11,7 +11,7 @@ import net.ceedubs.ficus.Ficus._
 /**
  * @author andr83
  */
-case class ParseDelimited(
+case class ParseDelimitedPipe(
   field: FieldPath,
   fields: Seq[FieldType],
   as: Option[FieldPath],
@@ -56,7 +56,7 @@ case class ParseDelimited(
     multiLine = multiLine,
     timeFormatter = timeFormatter
   )
-  val validatePipe = Validate(root)
+  val validatePipe = ValidatePipe(root)
 
   override def transformString(str: String)(implicit context: PipeContext): Option[PValue] = {
     val res = parser.read(str)

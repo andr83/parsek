@@ -12,7 +12,7 @@ import net.ceedubs.ficus.Ficus._
   *
   * @author andr83
  */
-case class Extract(from: Seq[String], to: Seq[String]) extends Pipe {
+case class ExtractPipe(from: Seq[String], to: Seq[String]) extends Pipe {
   def this(config: Config) = this(
     config.as[String]("from").split('.'),
     config.as[Option[String]]("to").getOrElse("").split('.')
@@ -56,23 +56,23 @@ case class Extract(from: Seq[String], to: Seq[String]) extends Pipe {
   }
 }
 
-object Extract {
+object ExtractPipe {
   /**
     * Create a new extract pipe
     * @param from path string
     * @param to path string
     */
-  def apply(from: String, to: String): Extract = Extract(from.split('.'), to.split('.'))
+  def apply(from: String, to: String): ExtractPipe = ExtractPipe(from.split('.'), to.split('.'))
 
   /**
     * Create a new pipe to extract values from path to root
     * @param from path string
     */
-  def apply(from: String): Extract = Extract(from.split('.'), Seq.empty[String])
+  def apply(from: String): ExtractPipe = ExtractPipe(from.split('.'), Seq.empty[String])
 
   /**
     * Create a new extract pipe
     * @param config configuration object with from,to fields
     */
-  def apply(config: Config): Extract = new Extract(config)
+  def apply(config: Config): ExtractPipe = new ExtractPipe(config)
 }

@@ -7,7 +7,7 @@ import net.ceedubs.ficus.Ficus._
 /**
  * @author andr83
  */
-case class ZipValues(config: Config) extends Pipe {
+case class ZipValuesPipe(config: Config) extends Pipe {
   val field: Seq[String] = config.as[Option[String]]("field").map(_.split('.').toSeq).getOrElse(Seq.empty[String])
   val keyField: String = config.as[String]("keyField")
   val valueField: String = config.as[String]("valueField")

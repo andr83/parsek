@@ -16,7 +16,7 @@ import scala.util.matching.Regex
   *
   * @author andr83
   */
-case class ParseRegex(
+case class ParseRegexPipe(
   pattern: Regex,
   field: FieldPath = Seq.empty[String],
   as: Option[FieldPath] = None
@@ -41,7 +41,7 @@ case class ParseRegex(
   }
 }
 
-object ParseRegex {
+object ParseRegexPipe {
 
-  def apply(config: Config): ParseRegex = new ParseRegex(config)
+  def apply(config: Config): ParseRegexPipe = new ParseRegexPipe(config)
 }

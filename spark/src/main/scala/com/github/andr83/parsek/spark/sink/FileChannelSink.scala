@@ -7,7 +7,7 @@ import java.nio.file.{Path, Paths}
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.formatter.FieldFormatter
 import com.github.andr83.parsek.serde.{SerDe, Serializer, StringSerializer}
-import com.github.andr83.parsek.spark.{RDDUtils, Sink}
+import com.github.andr83.parsek.spark.util.RDDUtils
 import com.github.andr83.parsek.util.AsyncFileUtils
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
@@ -100,7 +100,7 @@ case class FileChannelSink(
                   dump(filePath, ByteBuffer.wrap(buffer.take(buffer.length - 1).toArray))
                 }
               } else {
-                val buffer = ByteBuffer.wrap(lines.mkString("\n").getBytes())
+                val buffer = ByteBuffer.wrap(lines.map(_._2).mkString("\n").getBytes())
                 dump(filePath, buffer)
               }
             }

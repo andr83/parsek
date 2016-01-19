@@ -10,7 +10,7 @@ class ExtractSpec extends FlatSpec with Matchers {
   implicit val context = new PipeContext()
 
   "Extract pipe " should " move values from inner PMap to other PMap " in {
-    val pipe = Extract(from="logs.data", to="logs.data2")
+    val pipe = ExtractPipe(from="logs.data", to="logs.data2")
     val value = PMap("logs" ->
       PMap("data" ->
         PMap(
@@ -33,7 +33,7 @@ class ExtractSpec extends FlatSpec with Matchers {
   }
 
   "Extract pipe " should " move values from inner PMap to root" in {
-    val pipe = Extract(from="logs.data")
+    val pipe = ExtractPipe(from="logs.data")
     val value = PMap("logs" ->
       PMap("data" ->
         PMap(
@@ -52,7 +52,7 @@ class ExtractSpec extends FlatSpec with Matchers {
   }
 
   "Extract pipe " should "throw IllegalStateException on invalid path" in {
-    val pipe = Extract(from="logs.data")
+    val pipe = ExtractPipe(from="logs.data")
     val value = PMap("logs" ->
       PMap("data" -> PString("data string"))
     )

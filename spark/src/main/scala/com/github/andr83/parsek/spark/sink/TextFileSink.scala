@@ -2,7 +2,6 @@ package com.github.andr83.parsek.spark.sink
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.serde.{SerDe, Serializer}
-import com.github.andr83.parsek.spark.Sink
 import com.github.andr83.parsek.spark.util.HadoopUtils
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
@@ -35,13 +34,14 @@ case class TextFileSink(
       val ser = serializerFactory()
       it.map(v => new String(ser.write(v).map(_.toChar)))
     }).filter(_.trim.nonEmpty)) getOrElse rdd
-    if (out.isEmpty()) {
-      logger.info("Rdd is empty")
-    } else {
+    try {
       codec match {
         case Some(codecClass) => out.saveAsTextFile(path, codecClass)
         case None => out.saveAsTextFile(path)
       }
+    } catch {
+      case e: Exception =>
+        logger.error(e.toString, e)
     }
   }
 }

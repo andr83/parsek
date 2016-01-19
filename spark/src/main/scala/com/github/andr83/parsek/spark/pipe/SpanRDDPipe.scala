@@ -1,22 +1,22 @@
-package com.github.andr83.parsek.spark.streaming.pipe
+package com.github.andr83.parsek.spark.pipe
 
-import com.github.andr83.parsek.spark.streaming.StreamFlowRepository
+import com.github.andr83.parsek._
+import com.github.andr83.parsek.spark.FlowRepository
 import com.github.andr83.parsek.spark.util.RuntimeUtils
-import com.github.andr83.parsek.{PValuePredicate, PipeContext}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
 import scala.util.{Failure, Success, Try}
 
 /**
-  * Split stream with 2 flows based on predicate
+  * Split RDD with 2 flows based on predicate
   *
   * @param predicateFactory factory function to return PValue => Boolean instance
-  * @param toFlows Flows name to split
+  * @param toFlows New flows names
   *
   * @author andr83
   */
-case class SpanDStreamPipe(predicateFactory: () => PValuePredicate, toFlows: Seq[String]) extends DStreamPipe {
+case class SpanRDDPipe(predicateFactory: () => PValuePredicate, toFlows: Seq[String]) extends RDDPipe {
 
   def this(config: Config) = this(
     predicateFactory = () => RuntimeUtils.compileFilterFn(config.as[String]("predicate")),
@@ -27,13 +27,13 @@ case class SpanDStreamPipe(predicateFactory: () => PValuePredicate, toFlows: Seq
 
   lazy val predicate: PValuePredicate = predicateFactory()
 
-  override def run(flow: String, repository: StreamFlowRepository): Unit = {
-    val cachedStream = repository.getStream(flow).cache()
+  override def run(flow: String, repository: FlowRepository):Unit = {
+    val cachedRdd = repository.getRdd(flow).cache()
 
     val firstContext = repository.getContext(toFlows.head, flow)
     val secondContext = repository.getContext(toFlows.last, flow)
 
-    repository += (toFlows.head -> cachedStream.filter(r => Try(predicate(r)) match {
+    repository += (toFlows.head -> cachedRdd.filter(r => Try(predicate(r)) match {
       case Success(res) => res
       case Failure(error) =>
         logger.error(error.toString)
@@ -41,7 +41,7 @@ case class SpanDStreamPipe(predicateFactory: () => PValuePredicate, toFlows: Seq
         false
     }))
 
-    repository += (toFlows.last -> cachedStream.filter(r =>Try(predicate(r)) match {
+    repository += (toFlows.last -> cachedRdd.filter(r =>Try(predicate(r)) match {
       case Success(res) => !res
       case Failure(error) =>
         logger.error(error.toString)

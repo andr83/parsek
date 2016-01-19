@@ -11,7 +11,7 @@ import org.json4s.jackson.JsonMethods.{parse => jsonParse}
   *
   * @author andr83
   */
-case class ParseJson(
+case class ParseJsonPipe(
   field: FieldPath = Seq.empty[String],
   as: Option[FieldPath] = None
 ) extends TransformPipe(field, as) {
@@ -49,6 +49,6 @@ case class ParseJson(
   }
 }
 
-object ParseJson {
-  def apply(config: Config): ParseJson = new ParseJson(config)
+object ParseJsonPipe {
+  def apply(config: Config): ParseJsonPipe = new ParseJsonPipe(config)
 }

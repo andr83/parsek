@@ -128,7 +128,7 @@ case class RecordField(
 
   override def validate(value: PValue)(implicit context: PipeContext): Option[PMap] = value match {
     case PMap(map) =>
-      val res = fields flatMap (f => map.get(f.name) match {
+      val res = fields flatMap (f => map.getValue(f.name) match {
         case Some(v) =>
           Try(f.validate(v)) match {
             case Success(Some(validated)) => Some(f.asField -> validated)

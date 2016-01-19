@@ -1,4 +1,4 @@
-package com.github.andr83.parsek.spark
+package com.github.andr83.parsek.spark.util
 
 import com.github.andr83.parsek.formatter.FieldFormatter
 import com.github.andr83.parsek.serde.{Serializer, StringSerializer}

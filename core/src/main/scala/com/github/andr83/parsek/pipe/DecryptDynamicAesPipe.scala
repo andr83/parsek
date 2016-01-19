@@ -17,16 +17,16 @@ import net.ceedubs.ficus.Ficus._
   *
   * @author andr83
   */
-case class DecryptDynamicAes(
+case class DecryptDynamicAesPipe(
   aesKeyField: FieldPath,
   field: FieldPath,
-  algorithm: String = DecryptDynamicAes.DefaultAlgorithm,
+  algorithm: String = DecryptDynamicAesPipe.DefaultAlgorithm,
   as: Option[FieldPath] = None) extends TransformPipe(field, as)
 {
   def this(config: Config) = this(
     aesKeyField = config.as[String]("aesKeyField").asFieldPath,
     field = config.as[String]("field").split('.').toSeq,
-    algorithm = config.as[Option[String]]("algorithm").getOrElse(DecryptDynamicAes.DefaultAlgorithm),
+    algorithm = config.as[Option[String]]("algorithm").getOrElse(DecryptDynamicAesPipe.DefaultAlgorithm),
     as = config.as[Option[String]]("as").map(_.asFieldPath)
   )
 
@@ -49,8 +49,8 @@ case class DecryptDynamicAes(
   }
 }
 
-object DecryptDynamicAes {
+object DecryptDynamicAesPipe {
   val DefaultAlgorithm = "AES/ECB/PKCS5Padding"
 
-  def apply(config: Config): DecryptDynamicAes = new DecryptDynamicAes(config)
+  def apply(config: Config): DecryptDynamicAesPipe = new DecryptDynamicAesPipe(config)
 }

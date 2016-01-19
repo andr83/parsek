@@ -80,8 +80,8 @@ package object parsek {
     }
   }
 
-  case class IntCounter(var count: Int = 0) extends Serializable {
-    def +=(inc: Int): IntCounter = {
+  case class LongCounter(var count: Long = 0) extends Serializable {
+    def +=(inc: Long): LongCounter = {
       count += inc
       this
     }

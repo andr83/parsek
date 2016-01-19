@@ -7,7 +7,7 @@ import net.ceedubs.ficus.Ficus._
 /**
   * @author andr83
   */
-case class Coalesce(fields: Seq[FieldPath], as: Option[FieldPath] = None) extends Pipe {
+case class CoalescePipe(fields: Seq[FieldPath], as: Option[FieldPath] = None) extends Pipe {
 
   def this(config: Config) = this(
     fields = config.as[Seq[String]]("fields").map(_.asFieldPath),

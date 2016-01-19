@@ -13,7 +13,7 @@ import org.apache.commons.codec.binary.Base64
   *
   * @author andr83
   */
-case class DecodeBase64(field: FieldPath, as: Option[FieldPath] = None) extends TransformPipe(field, as) {
+case class DecodeBase64Pipe(field: FieldPath, as: Option[FieldPath] = None) extends TransformPipe(field, as) {
 
   def this(config: Config) =
     this(config.as[String]("field").asFieldPath, config.as[Option[String]]("as").map(_.asFieldPath))
@@ -23,6 +23,6 @@ case class DecodeBase64(field: FieldPath, as: Option[FieldPath] = None) extends 
   ))
 }
 
-object DecodeBase64 {
-  def apply(config: Config): DecodeBase64 = new DecodeBase64(config)
+object DecodeBase64Pipe {
+  def apply(config: Config): DecodeBase64Pipe = new DecodeBase64Pipe(config)
 }

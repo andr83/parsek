@@ -1,4 +1,4 @@
-package com.github.andr83.parsek.spark
+package com.github.andr83.parsek.spark.sink
 
 import com.github.andr83.parsek._
 import com.typesafe.config.Config
@@ -21,7 +21,7 @@ object Sink {
       .getOrElse(throw new IllegalStateException("Sink config must have type property"))
     val className = if (sinkType.contains(".")) sinkType
     else
-      "com.github.andr83.parsek.spark.sink." + sinkType.head.toUpper + sinkType.substring(1) + "Sink"
+      getClass.getPackage.getName + "." + sinkType.head.toUpper + sinkType.substring(1) + "Sink"
     val constructor = Class.forName(className).getConstructor(classOf[Config])
     constructor.newInstance(config).asInstanceOf[Sink]
   }

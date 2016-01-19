@@ -2,6 +2,7 @@ package com.github.andr83.parsek.spark
 
 import java.io.File
 
+import com.github.andr83.parsek.mapToConfig
 import com.github.andr83.parsek.resources.ResourceFactory
 import com.github.andr83.parsek.spark.PathFilter.PathFilter
 import com.typesafe.config.{Config, ConfigFactory}
@@ -72,6 +73,7 @@ abstract class SparkJob extends LazyLogging {
   var sparkLogLevel = Level.WARN
   var hadoopConfigDirectory = ""
   var config = ConfigFactory.empty()
+  var params = Map.empty[String, String]
 
   opt[String]("sparkMemory") foreach {
     sparkMemory = _
@@ -105,6 +107,10 @@ abstract class SparkJob extends LazyLogging {
       ConfigFactory.parseFile(path)
     }
   } text "Configuration file path. Support local and hdfs"
+
+  opt[Map[String, String]]("params") foreach {
+    params = _
+  } text "Configuration file params in format param1=val1,param2=val2"
 
   /**
     * List recursively all files from path
@@ -149,6 +155,7 @@ abstract class SparkJob extends LazyLogging {
         config = newConfig.withFallback(config)
       }
     })
+    config = config.withFallback(params)
     config = config.resolve()
   }
 

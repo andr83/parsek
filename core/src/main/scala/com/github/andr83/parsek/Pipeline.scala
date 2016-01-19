@@ -1,6 +1,7 @@
 package com.github.andr83.parsek
 
 import com.github.andr83.parsek.meta.RequiredFieldError
+import com.github.andr83.parsek.pipe.Pipe
 import com.typesafe.config._
 import com.typesafe.scalalogging.slf4j.LazyLogging
 
@@ -15,7 +16,7 @@ class Pipeline(pipes: Pipe*) extends Serializable with LazyLogging {
   def run(value: PValue)(implicit context: PipeContext): List[PValue] = {
     try {
       val res = nextPipe(pipes, value)
-      context.getCounter(InfoGroup, "OUTPUT_ROWS") += res.length
+//      context.getCounter(InfoGroup, "OUTPUT_ROWS") += res.length
       res
     } catch {
       case NonFatal(ex) =>
@@ -29,9 +30,9 @@ class Pipeline(pipes: Pipe*) extends Serializable with LazyLogging {
         } else {
           context.getCounter(ErrorGroup, (e.getClass.getSimpleName, context.path.mkString(".")).toString()) += 1
         }
-        List()
+        List.empty[PValue]
     } finally {
-      context.getCounter(InfoGroup, "INPUT_ROWS") += 1
+//      context.getCounter(InfoGroup, "INPUT_ROWS") += 1
     }
   }
 

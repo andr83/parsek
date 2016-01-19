@@ -4,6 +4,7 @@ import com.github.andr83.parsek._
 import com.github.andr83.parsek.formatter.DateFormatter
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
+import org.apache.commons.lang.StringEscapeUtils
 import org.json4s._
 import org.json4s.jackson.JsonMethods.{compact, parse => jsonParse, render}
 
@@ -33,7 +34,7 @@ case class JsonSerDe(
   }
 
   def convertToJson(value: PValue): JValue = value match {
-    case PString(str) => JString(str)
+    case PString(str) => JString(StringEscapeUtils.escapeJavaScript(str))
     case PInt(num) => JInt(num)
     case PLong(num) => JInt(num)//JLong(num)
     case PDouble(num) => JDouble(num)

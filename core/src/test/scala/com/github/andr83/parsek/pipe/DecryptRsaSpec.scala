@@ -36,7 +36,7 @@ class DecryptRsaSpec extends FlatSpec with Matchers with Inside {
       "field" -> "body"
     ))
 
-    val decryptor = DecryptRsa(config)
+    val decryptor = DecryptRsaPipe(config)
 
     val result: Option[PMap] = decryptor.run(PMap(
       "body" -> PString(body)

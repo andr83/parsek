@@ -12,7 +12,7 @@ class ParseRegexSpec extends FlatSpec with Matchers with Inside {
   val line = "2014-11-11 06:00:00, [191.247.226.134],[&imei=8a7edf8a47c923f21096fe51660d341b&os=Android&version=16]"
 
   "Regex parser" should "return PMap" in {
-    val parser = new ParseRegex("(?<time>[\\d\\s-:]+),\\s+\\[(?<ip>[\\d\\.]+)\\].+\\[(?<q>.+)\\].*".r)
+    val parser = new ParseRegexPipe("(?<time>[\\d\\s-:]+),\\s+\\[(?<ip>[\\d\\.]+)\\].+\\[(?<q>.+)\\].*".r)
     val result = parser.transformString(line)
 
     result shouldBe Some(PMap(

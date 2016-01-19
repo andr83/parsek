@@ -1,10 +1,9 @@
 package com.github.andr83.parsek.spark.streaming.pipe
 
-import com.github.andr83.parsek.{PValue, PipeContext}
+import com.github.andr83.parsek.spark.streaming.StreamFlowRepository
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import net.ceedubs.ficus.Ficus._
-import org.apache.spark.streaming.dstream.DStream
 
 /**
   * DStreamPipe allow to transform current flow to one or multiple flows
@@ -14,20 +13,24 @@ import org.apache.spark.streaming.dstream.DStream
 trait DStreamPipe extends LazyLogging {
 
   /**
-    * Transfoem flow
+    * Transform flow
     *
     * @param flow flow name
     * @param stream flow stream
-    * @param pipeContext
+    * @param pipeContext implicit context for parsek jobs
     * @return
     */
-  def run(flow: String, stream: DStream[PValue])(implicit pipeContext: PipeContext): Map[String, DStream[PValue]]
+  def run(flow: String, repository: StreamFlowRepository): Unit
 }
 
 object DStreamPipe {
   def apply(config: Config): DStreamPipe = {
-    val pipeName = config.as[Option[String]]("type").getOrElse("parsek").split(":").head
-    val className = if (pipeName.contains(".")) pipeName else
+    val typeName = config
+      .as[Option[String]]("type")
+      .getOrElse(throw new IllegalStateException("DStreamPipe config must have type property"))
+    val pipeName = typeName.split(":").head
+    val className = if (pipeName.contains(".")) pipeName
+    else
       getClass.getPackage.getName + "." + pipeName.head.toUpper + pipeName.substring(1) + "DStreamPipe"
     Class.forName(className).getConstructor(classOf[Config]).newInstance(config).asInstanceOf[DStreamPipe]
   }

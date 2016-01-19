@@ -1,7 +1,6 @@
 package com.github.andr83.parsek.spark.sink
 
 import com.github.andr83.parsek._
-import com.github.andr83.parsek.spark.Sink
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.apache.log4j.Level

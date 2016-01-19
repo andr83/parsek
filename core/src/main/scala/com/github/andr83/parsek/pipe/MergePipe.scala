@@ -12,7 +12,7 @@ import net.ceedubs.ficus.Ficus._
   *
   * @author andr83
  */
-case class Merge(fields: Seq[FieldPath], as: Option[String] = None) extends Pipe {
+case class MergePipe(fields: Seq[FieldPath], as: Option[String] = None) extends Pipe {
 
   def this(config: Config) = this(
     fields = config.as[List[String]]("fields").map(_.asFieldPath),

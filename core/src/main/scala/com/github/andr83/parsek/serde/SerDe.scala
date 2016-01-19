@@ -30,7 +30,7 @@ object SerDe {
       .getOrElse(throw new IllegalStateException("SerDe config should have type property"))
     val className = if (sType.contains(".")) sType
     else
-      "com.github.andr83.parsek.serde." + sType.head.toUpper + sType.substring(1) + "SerDe"
+      getClass.getPackage.getName + "." + sType.head.toUpper + sType.substring(1) + "SerDe"
     val constructor = Class.forName(className).getConstructor(classOf[Config])
     constructor.newInstance(config).asInstanceOf[SerDe]
   }

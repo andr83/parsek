@@ -10,7 +10,7 @@ class CoalesceSpec extends FlatSpec with Matchers {
   implicit val context = new PipeContext()
 
   it should "return first non empty value and update with it first field" in {
-    val pipe = Coalesce(fields = Seq("f1".asFieldPath, "f2".asFieldPath))
+    val pipe = CoalescePipe(fields = Seq("f1".asFieldPath, "f2".asFieldPath))
     val value = PMap("f2" -> PString("v2"))
 
     val result = pipe.run(value)

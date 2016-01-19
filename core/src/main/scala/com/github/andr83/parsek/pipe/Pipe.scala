@@ -1,5 +1,6 @@
-package com.github.andr83.parsek
+package com.github.andr83.parsek.pipe
 
+import com.github.andr83.parsek.{PValue, PipeContext}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import net.ceedubs.ficus.Ficus._
@@ -16,7 +17,7 @@ object Pipe {
     val pipeName = config.as[Option[String]]("type")
       .getOrElse(throw new IllegalStateException(s"Pipe config must have type property: $config"))
     val className = if (pipeName.contains(".")) pipeName else
-      "com.github.andr83.parsek.pipe." + pipeName.head.toUpper + pipeName.substring(1)
+      getClass.getPackage.getName + "." + pipeName.head.toUpper + pipeName.substring(1) + "Pipe"
 
     val configClass = classOf[Config]
     val pipe = for {

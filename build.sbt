@@ -2,7 +2,7 @@ import sbt.Keys._
 import sbt._
 
 val guavaVersion = "14.0"
-val hadoopVersion = "2.3.+"
+val hadoopVersion = "2.7.+"
 val jacksonCoreVersion = "2.4.4"
 val jacksonVersion = "2.6.1"
 val javaxServletVersion = "3.0.1"
@@ -74,9 +74,9 @@ val hadoopExclusion = Seq(
 
 val hadoopDependencies = Seq(
   "com.google.guava" % "guava" % guavaVersion,
-  "org.apache.hadoop" % "hadoop-client" % hadoopVersion
+  "org.apache.hadoop" % "hadoop-client" % hadoopVersion % "provided"
     excludeAll (hadoopExclusion: _*),
-  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion
+  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion % "provided"
     excludeAll (hadoopExclusion: _*)
 )
 
@@ -116,7 +116,7 @@ lazy val spark = project
     name := "parsek-spark",
     libraryDependencies ++= hadoopDependencies ++ Seq(
       "com.github.scopt" %% "scopt" % scoptVersion,
-      "org.apache.spark" %% "spark-core" % sparkVersion
+      "org.apache.spark" %% "spark-core" % sparkVersion  % "provided"
         excludeAll (sparkExclusions: _*),
       "com.twitter"      %% "util-eval" % twitterUtilVersion
     )
@@ -129,9 +129,9 @@ lazy val sql = project
   .settings(
     name := "parsek-sql",
     libraryDependencies ++= hadoopDependencies ++ Seq(
-      "org.apache.spark" %% "spark-sql" % sparkVersion
+      "org.apache.spark" %% "spark-sql" % sparkVersion  % "provided"
         excludeAll (sparkExclusions: _*),
-      "org.apache.spark" %% "spark-hive" % sparkVersion
+      "org.apache.spark" %% "spark-hive" % sparkVersion  % "provided"
     )
   )
   .dependsOn(spark)
@@ -160,4 +160,4 @@ lazy val assemblyProject = project
     name := "parsek-assembly",
     assemblyJarName in assembly := s"parsek-assembly-${version.value}.jar"
   )
-  .dependsOn(core, spark, sql, streaming)
+  .dependsOn(core, spark, sql)

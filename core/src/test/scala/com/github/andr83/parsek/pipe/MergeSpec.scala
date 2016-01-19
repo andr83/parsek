@@ -10,7 +10,7 @@ class MergeSpec extends FlatSpec with Matchers {
   implicit val context = new PipeContext()
 
   "Multiple PMap values" should "be merged to one PMap and store on parent level" in {
-    val pipe = Merge(fields = Seq("data.f1".asFieldPath, "data.f2".asFieldPath))
+    val pipe = MergePipe(fields = Seq("data.f1".asFieldPath, "data.f2".asFieldPath))
 
     val value =
       PMap("data" ->
@@ -38,7 +38,7 @@ class MergeSpec extends FlatSpec with Matchers {
   }
 
   "Multiple PMap values" should "be merged to one PMap and store as first key" in {
-    val pipe = Merge(fields = Seq("data.f1".asFieldPath, "data.f2".asFieldPath), as = Some("f1"))
+    val pipe = MergePipe(fields = Seq("data.f1".asFieldPath, "data.f2".asFieldPath), as = Some("f1"))
 
     val value =
       PMap("data" ->
@@ -72,7 +72,7 @@ class MergeSpec extends FlatSpec with Matchers {
 
   "Merge " must "throw IllegalStateException on getting fields on different levels" in {
     a[IllegalStateException] shouldBe thrownBy {
-      Merge(fields = Seq("f1".asFieldPath, "data.f2".asFieldPath))
+      MergePipe(fields = Seq("f1".asFieldPath, "data.f2".asFieldPath))
     }
   }
 }
