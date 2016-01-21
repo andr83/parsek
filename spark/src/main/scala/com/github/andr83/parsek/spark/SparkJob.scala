@@ -53,12 +53,10 @@ abstract class SparkJob extends LazyLogging {
 
   lazy val hadoopConfig = {
     val conf = new Configuration
-    conf.set("fs.hdfs.impl",
-      "org.apache.hadoop.hdfs.DistributedFileSystem"
-    )
-    conf.set("fs.file.impl",
-      "org.apache.hadoop.fs.LocalFileSystem"
-    )
+    conf.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
+    conf.set("fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
+    conf.set("spark.yarn.appMasterEnv.HADOOP_USER_NAME", hadoopUser.getOrElse(System.getProperty("user.name")))
+
     if (hadoopConfigDirectory.nonEmpty) {
       conf.addResource(new Path(hadoopConfigDirectory + "/core-site.xml"))
       conf.addResource(new Path(hadoopConfigDirectory + "/hdfs-site.xml"))
@@ -69,8 +67,9 @@ abstract class SparkJob extends LazyLogging {
   lazy val resourceFactory = ResourceFactory()
 
   var sparkMemory = "1G"
-  var sparkMaster = "local[2]"
+  var sparkMaster = "local[*]"
   var sparkLogLevel = Level.WARN
+  var hadoopUser: Option[String] = None
   var hadoopConfigDirectory = ""
   var config = ConfigFactory.empty()
   var params = Map.empty[String, String]
@@ -87,8 +86,9 @@ abstract class SparkJob extends LazyLogging {
     sparkLogLevel = Level.toLevel(value)
   } text "Spark logger output level. Default WARN"
 
-  opt[String]("hadoopUser") foreach {
-    System.setProperty("HADOOP_USER_NAME", _)
+  opt[String]("hadoopUser") foreach {user=>
+    hadoopUser = Some(user)
+    System.setProperty("HADOOP_USER_NAME", user)
   } text "Set HADOOP_USER_NAME enviroment variable"
 
   opt[String]("hadoopConfigDirectory") foreach {

@@ -2,14 +2,12 @@ import sbt.Keys._
 import sbt._
 
 val guavaVersion = "14.0"
-val hadoopVersion = "2.7.+"
-val jacksonCoreVersion = "2.4.4"
-val jacksonVersion = "2.6.1"
+val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.+")
 val javaxServletVersion = "3.0.1"
+val jacksonVersion = "2.4.4"
 val json4SVersion = "3.2.10"
 val ficusVersion = "1.0.1"
 val openCsvVersion = "3.4"
-val playJsonVersion = "2.4.3"
 val scalaArmVersion = "1.4"
 val scalaLoggingVersion = "2.1.2"
 val scalaTestVersion = "2.2.+"
@@ -17,7 +15,7 @@ val scalaTimeVersion = "1.8.+"
 val scoptVersion = "3.3.+"
 val slf4jVersion = "1.7.5"
 val snappyJavaVersion = "1.1.2"
-val sparkVersion = "1.3.1"
+val sparkVersion = sys.props.getOrElse("sparkVersion", default = "1.5.0")
 val typesafeConfigVersion = "1.2.+"
 val twitterUtilVersion = "6.27.0"
 
@@ -29,7 +27,7 @@ lazy val commonSettings = Seq(
   resolvers += Resolver.sonatypeRepo("releases"),
   externalResolvers := Seq(
     "Maven Central Server" at "http://repo1.maven.org/maven2",
-    "Sonatype OSS Releases"  at "http://oss.sonatype.org/content/repositories/releases/"
+    "Sonatype OSS Releases" at "http://oss.sonatype.org/content/repositories/releases/"
   )
 )
 
@@ -43,7 +41,7 @@ lazy val assemblySettings = Seq(
     case PathList("com", "esotericsoftware", xs@_*) => MergeStrategy.last
     case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
     case PathList("META-INF", "ECLIPSEF.RSA") => MergeStrategy.discard
-    case PathList("META-INF", xs@_*) => MergeStrategy.last
+    case PathList("META-INF", xs@_*) => MergeStrategy.discard
     case "plugin.properties" => MergeStrategy.discard
     case "about.html" => MergeStrategy.rename
     case "reference.conf" => MergeStrategy.concat
@@ -54,10 +52,14 @@ lazy val assemblySettings = Seq(
   )
 )
 
-val jacksonCoreExclusion = ExclusionRule("com.fasterxml.jackson.core")
+val jacksonExclusion = Seq(
+  ExclusionRule("com.fasterxml.jackson.core"),
+  ExclusionRule("com.fasterxml.jackson.databind"),
+  ExclusionRule("com.fasterxml.jackson.module")
+)
+
 val guavaExclusion = ExclusionRule("com.google.guava", "guava")
 val sparkExclusions = Seq(
-//  jacksonCoreExclusion,
   guavaExclusion,
   ExclusionRule("org.apache.hadoop"),
   ExclusionRule("org.apache.hbase"),
@@ -74,9 +76,9 @@ val hadoopExclusion = Seq(
 
 val hadoopDependencies = Seq(
   "com.google.guava" % "guava" % guavaVersion,
-  "org.apache.hadoop" % "hadoop-client" % hadoopVersion % "provided"
+  "org.apache.hadoop" % "hadoop-client" % hadoopVersion
     excludeAll (hadoopExclusion: _*),
-  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion % "provided"
+  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion
     excludeAll (hadoopExclusion: _*)
 )
 
@@ -98,7 +100,11 @@ lazy val core = project
       "com.typesafe" % "config" % typesafeConfigVersion,
       "com.typesafe.scala-logging" %% "scala-logging-slf4j" % scalaLoggingVersion,
       "org.json4s" %% "json4s-native" % json4SVersion,
-      "org.json4s" %% "json4s-jackson" % json4SVersion,
+      "org.json4s" %% "json4s-jackson" % json4SVersion
+        excludeAll(jacksonExclusion: _*),
+      "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion,
+      "com.fasterxml.jackson.core" % "jackson-annotations" % jacksonVersion,
+      "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
       "com.opencsv" % "opencsv" % openCsvVersion,
       "com.jsuereth" %% "scala-arm" % scalaArmVersion,
       "com.github.nscala-time" %% "nscala-time" % scalaTimeVersion,
@@ -114,11 +120,11 @@ lazy val spark = project
   .settings(commonSettings: _*)
   .settings(
     name := "parsek-spark",
-    libraryDependencies ++= hadoopDependencies ++ Seq(
+    libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % scoptVersion,
-      "org.apache.spark" %% "spark-core" % sparkVersion  % "provided"
+      "org.apache.spark" %% "spark-core" % sparkVersion
         excludeAll (sparkExclusions: _*),
-      "com.twitter"      %% "util-eval" % twitterUtilVersion
+      "com.twitter" %% "util-eval" % twitterUtilVersion
     )
   )
   .dependsOn(core)
@@ -129,9 +135,9 @@ lazy val sql = project
   .settings(
     name := "parsek-sql",
     libraryDependencies ++= hadoopDependencies ++ Seq(
-      "org.apache.spark" %% "spark-sql" % sparkVersion  % "provided"
+      "org.apache.spark" %% "spark-sql" % sparkVersion
         excludeAll (sparkExclusions: _*),
-      "org.apache.spark" %% "spark-hive" % sparkVersion  % "provided"
+      "org.apache.spark" %% "spark-hive" % sparkVersion
     )
   )
   .dependsOn(spark)
@@ -153,11 +159,43 @@ lazy val streaming = project
   .dependsOn(spark)
   .disablePlugins(sbtassembly.AssemblyPlugin)
 
+val JarConfig = config("jar") extend Compile
+
 lazy val assemblyProject = project
+  .in(file("assembly"))
+  .configs(JarConfig)
   .settings(commonSettings: _*)
   .settings(assemblySettings: _*)
   .settings(
     name := "parsek-assembly",
     assemblyJarName in assembly := s"parsek-assembly-${version.value}.jar"
   )
-  .dependsOn(core, spark, sql)
+  .settings(inConfig(JarConfig)
+  (Classpaths.configSettings ++ Defaults.configTasks ++ baseAssemblySettings ++ commonSettings ++ assemblySettings ++ Seq(
+    assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = false),
+    assemblyJarName in assembly := s"parsek-${version.value}.jar"
+  )): _*)
+  .dependsOn(core, spark, sql, streaming)
+
+lazy val assemblyClusterProject = project
+  .in(file("assembly-cluster"))
+  .settings(commonSettings: _*)
+  .settings(assemblySettings: _*)
+  .settings(
+    assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false),
+    assemblyJarName in assembly := s"parsek-cluster-${version.value}.jar"
+  )
+  .settings(
+    projectDependencies := {
+      Seq(
+        (projectID in core).value.excludeAll(
+          ExclusionRule("org.apache.hadoop"),
+          ExclusionRule("org.xerial.snappy")
+        ),
+        (projectID in spark).value.excludeAll(ExclusionRule("org.apache.spark")),
+        (projectID in sql).value.excludeAll(ExclusionRule("org.apache.spark")),
+        (projectID in streaming).value.excludeAll(ExclusionRule("org.apache.spark"))
+      )
+    }
+  )
+  .dependsOn(core, spark, sql, streaming)
