@@ -12,12 +12,6 @@ trait Serializer {
   def write(value: PValue): Array[Byte]
 }
 
-object StringSerializer extends Serializer {
-  def write(value: PValue): Array[Byte] = value.toString.asBytes
-
-  def factory() = StringSerializer
-}
-
 trait Deserializer {
   def read(value: Array[Byte]): PValue
 }
