@@ -30,7 +30,9 @@ lazy val commonSettings = Seq(
   externalResolvers := Seq(
     "Maven Central Server" at "http://repo1.maven.org/maven2",
     "Sonatype OSS Releases" at "http://oss.sonatype.org/content/repositories/releases/"
-  )
+  ),
+  publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository"))),
+  isSnapshot := true
 )
 
 lazy val assemblySettings = Seq(
@@ -96,6 +98,7 @@ lazy val core = project
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value
     ),
+    crossScalaVersions := Seq("2.11.0", "2.10.4"),
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "org.slf4j" % "slf4j-simple" % slf4jVersion % "test",
@@ -112,9 +115,13 @@ lazy val core = project
       "com.github.nscala-time" %% "nscala-time" % scalaTimeVersion,
       "javax.servlet" % "javax.servlet-api" % javaxServletVersion,
       "org.xerial.snappy" % "snappy-java" % snappyJavaVersion,
-      "net.ceedubs" %% "ficus" % ficusVersion,
+//      "net.ceedubs" %% "ficus" % ficusVersion,
       "commons-codec" % "commons-codec" % commonsCodecVersion,
       "commons-lang" % "commons-lang" % commonsLangVersion,
+      if (scalaVersion.value.contains("2.10"))
+        "net.ceedubs" %% "ficus" % "1.0.1"
+      else
+        "net.ceedubs" % "ficus_2.11" % "1.1.2",
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     )// ++ hadoopDependencies
   )

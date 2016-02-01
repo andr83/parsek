@@ -22,9 +22,7 @@ object Pipe {
     val configClass = classOf[Config]
     val pipe = for {
       c <- Class.forName(className).getConstructors
-      if c.getParameterCount == 1
-      p <- c.getParameters
-      if p.getType == configClass
+      if c.getParameterTypes.size == 1 && c.getParameterTypes.head == configClass
     } yield c.newInstance(config).asInstanceOf[Pipe]
 
     if (pipe.nonEmpty) pipe.head else
