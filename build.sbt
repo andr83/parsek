@@ -1,6 +1,8 @@
 import sbt.Keys._
 import sbt._
 
+val commonsCodecVersion = "1.1"
+val commonsLangVersion = "2.6"
 val guavaVersion = "14.0"
 val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.+")
 val javaxServletVersion = "3.0.1"
@@ -15,7 +17,7 @@ val scalaTimeVersion = "1.8.+"
 val scoptVersion = "3.3.+"
 val slf4jVersion = "1.7.5"
 val snappyJavaVersion = "1.1.2"
-val sparkVersion = sys.props.getOrElse("sparkVersion", default = "1.5.0")
+val sparkVersion = sys.props.getOrElse("sparkVersion", default = "1.5.2")
 val typesafeConfigVersion = "1.2.+"
 val twitterUtilVersion = "6.27.0"
 
@@ -111,8 +113,10 @@ lazy val core = project
       "javax.servlet" % "javax.servlet-api" % javaxServletVersion,
       "org.xerial.snappy" % "snappy-java" % snappyJavaVersion,
       "net.ceedubs" %% "ficus" % ficusVersion,
+      "commons-codec" % "commons-codec" % commonsCodecVersion,
+      "commons-lang" % "commons-lang" % commonsLangVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
-    ) ++ hadoopDependencies
+    )// ++ hadoopDependencies
   )
   .disablePlugins(sbtassembly.AssemblyPlugin)
 
@@ -125,7 +129,7 @@ lazy val spark = project
       "org.apache.spark" %% "spark-core" % sparkVersion
         excludeAll (sparkExclusions: _*),
       "com.twitter" %% "util-eval" % twitterUtilVersion
-    )
+    ) ++ hadoopDependencies
   )
   .dependsOn(core)
   .disablePlugins(sbtassembly.AssemblyPlugin)
@@ -134,7 +138,7 @@ lazy val sql = project
   .settings(commonSettings: _*)
   .settings(
     name := "parsek-sql",
-    libraryDependencies ++= hadoopDependencies ++ Seq(
+    libraryDependencies ++= Seq(
       "org.apache.spark" %% "spark-sql" % sparkVersion
         excludeAll (sparkExclusions: _*),
       "org.apache.spark" %% "spark-hive" % sparkVersion
@@ -147,7 +151,7 @@ lazy val streaming = project
   .settings(commonSettings: _*)
   .settings(
     name := "parsek-streaming",
-    libraryDependencies ++= hadoopDependencies ++ Seq(
+    libraryDependencies ++= Seq(
       "org.apache.spark" %% "spark-streaming" % sparkVersion
         excludeAll (sparkExclusions: _*),
       "org.apache.spark" %% "spark-streaming-kafka" % sparkVersion

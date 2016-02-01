@@ -37,7 +37,7 @@ case class TextFileSource(path: Seq[String], filters: Seq[PathFilter]) extends S
   override def apply(job: SparkJob): RDD[PValue] = {
     val files = path.flatMap(job.listFilesOnly(_, defaultHadoopFilter +: filters))
     logger.info("Input files:")
-    files.foreach(f => logger.info(f))
+    files.sorted.foreach(f => logger.info(f))
     if (files.isEmpty) {
       job.sc.emptyRDD[PValue]
     } else {

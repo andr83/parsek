@@ -2,6 +2,7 @@ package com.github.andr83.parsek.meta
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.formatter.DateFormatter
+import com.typesafe.scalalogging.slf4j.LazyLogging
 
 //import com.github.andr83.parsek.ParsekConfig._
 import com.github.nscala_time.time.Imports._
@@ -21,7 +22,7 @@ sealed trait Field[T <: PValue] {
   var isRequired: Boolean = false
 
   def asField = as.getOrElse(name)
-  def validate(value: PValue)(implicit context: PipeContext): Option[T]
+  def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[T]
 }
 
 sealed trait StringCase
@@ -44,7 +45,7 @@ case class StringField(
   pattern: Option[Regex] = None,
   stringCase: Option[StringCase] = None
 ) extends Field[PString] {
-  override def validate(value: PValue)(implicit context: PipeContext): Option[PString] = {
+  override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PString] = {
     var res = value.value.toString
 
     if (res.trim == "") {
@@ -67,7 +68,7 @@ case class StringField(
 case class IntField(
   name: String
 ) extends Field[PInt] {
-  override def validate(value: PValue)(implicit context: PipeContext): Option[PInt] = Some(value match {
+  override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PInt] = Some(value match {
     case v: PInt => v
     case PLong(num) => num.toInt
     case PString(str) => str.toInt
@@ -78,7 +79,7 @@ case class IntField(
 case class LongField(
   name: String
 ) extends Field[PLong] {
-  override def validate(value: PValue)(implicit context: PipeContext): Option[PLong] = Some(value match {
+  override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PLong] = Some(value match {
     case v: PLong => v
     case PInt(num) => num.toLong
     case PString(str) => str.toLong
@@ -89,7 +90,7 @@ case class LongField(
 case class DoubleField(
   name: String
 ) extends Field[PDouble] {
-  override def validate(value: PValue)(implicit context: PipeContext): Option[PDouble] = Some(value match {
+  override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PDouble] = Some(value match {
     case v: PDouble => v
     case PInt(num) => num.toDouble
     case PLong(num) => num.toDouble
@@ -101,7 +102,7 @@ case class DoubleField(
 case class BooleanField(
   name: String
 ) extends Field[PBool] {
-  override def validate(value: PValue)(implicit context: PipeContext): Option[PBool] = Some(value match {
+  override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PBool] = Some(value match {
     case v: PBool => v
     case PInt(num) if Seq(0, 1).contains(num) => num == 1
     case PLong(num) if Seq(0, 1).contains(num) => num == 1
@@ -115,7 +116,7 @@ case class DateField(
   pattern: DateFormatter,
   toTimeZone: Option[DateTimeZone] = None
 ) extends Field[PDate] {
-  override def validate(value: PValue)(implicit context: PipeContext): Option[PDate] = Some({
+  override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PDate] = Some({
     val dt = pattern.parse(value)
     toTimeZone map (tz => PDate(dt.value.toDateTime(tz))) getOrElse dt
   })
@@ -124,13 +125,16 @@ case class DateField(
 case class RecordField(
   name: String,
   fields: Seq[FieldType]
-) extends Field[PMap] {
+) extends Field[PMap] with LazyLogging {
 
-  override def validate(value: PValue)(implicit context: PipeContext): Option[PMap] = value match {
+  val fieldNames = fields.map(_.name)
+
+  override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PMap] = value match {
     case PMap(map) =>
-      val res = fields flatMap (f => map.getValue(f.name) match {
+      var res = if (partial) map.filterKeys(!fieldNames.contains(_)) else Map.empty[String, PValue]
+      res = res ++ (fields flatMap (f => map.getValue(f.name) match {
         case Some(v) =>
-          Try(f.validate(v)) match {
+          Try(f.validate(v, partial)) match {
             case Success(Some(validated)) => Some(f.asField -> validated)
             case Success(None) =>
               checkIfRequired(f, FieldIsEmpty(s"Field ${f.name} is empty in $value"))
@@ -143,8 +147,8 @@ case class RecordField(
         case None =>
           checkIfRequired(f, FieldIsEmpty(s"Field ${f.name} is empty in $value"))
           None
-      })
-      if (res.isEmpty) None else Some(res.toMap)
+      }))
+      if (res.isEmpty) None else Some(res)
     case _ => throw IllegalValueType(s"Field $name expect map value type but got $value")
   }
 
@@ -152,6 +156,7 @@ case class RecordField(
     if (f.isRequired) {
       throw RequiredFieldError(f, ex)
     }
+    logger.error(ex.toString)
     context.getCounter(PipeContext.InfoGroup, (ex.getClass.getSimpleName, f.name).toString()) += 1
   }
 }
@@ -160,9 +165,9 @@ case class MapField(
   name: String,
   field: Option[FieldType]
 ) extends Field[PMap] {
-  override def validate(value: PValue)(implicit context: PipeContext): Option[PMap] = value match {
+  override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PMap] = value match {
     case PMap(map) =>
-      val res = field map (f => map.flatMap{case (k,v) => f.validate(v).map(k->_)}) getOrElse map
+      val res = field map (f => map.flatMap{case (k,v) => f.validate(v, partial).map(k->_)}) getOrElse map
       if (res.isEmpty) None else Some(res)
     case _ => throw IllegalValueType(s"Field $name expect map value type but got $value")
   }
@@ -172,7 +177,7 @@ case class ListField(
   name: String,
   field: Option[FieldType]
 ) extends Field[PList] {
-  override def validate(value: PValue)(implicit context: PipeContext): Option[PList] = value match {
+  override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PList] = value match {
     case PList(list) =>
       val res = field map (f => list.flatMap(v => f.validate(v))) getOrElse list
       if (res.isEmpty) None else as match {

@@ -12,14 +12,15 @@ import scala.util.{Failure, Success, Try}
 /**
  * @author andr83
  */
-case class ValidatePipe(root: RecordField) extends Pipe {
+case class ValidatePipe(root: RecordField, partial: Boolean = false) extends Pipe {
 
-  def this(config: Config) {
-    this(ValidatePipe.recordFieldFromConfig(config))
-  }
+  def this(config: Config) = this(
+    root = ValidatePipe.recordFieldFromConfig(config),
+    partial = config.as[Option[Boolean]]("partial").getOrElse(false)
+  )
 
   override def run(value: PValue)(implicit context: PipeContext): Option[PValue] = {
-    Try(root.validate(value)) match {
+    Try(root.validate(value, partial)) match {
       case Success(validated) => validated
       case Failure(RequiredFieldError(f, ex)) =>
         logger.error(ex.toString, ex)

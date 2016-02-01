@@ -19,7 +19,7 @@ case class DecodeBase64Pipe(field: FieldPath, as: Option[FieldPath] = None) exte
     this(config.as[String]("field").asFieldPath, config.as[Option[String]]("as").map(_.asFieldPath))
 
   override def transformString(str: String)(implicit context: PipeContext): Option[PValue] = Some(PString(
-    Base64.decodeBase64(str).asStr
+    Base64.decodeBase64(str.asBytes).asStr
   ))
 }
 

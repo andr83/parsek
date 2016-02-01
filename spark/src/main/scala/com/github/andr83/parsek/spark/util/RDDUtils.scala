@@ -13,6 +13,17 @@ import org.apache.spark.rdd.RDD
   * @author andr83
   */
 object RDDUtils extends LazyLogging {
+
+  def serialize(
+    rdd: RDD[PValue],
+    serializerFactory: () => Serializer = StringSerializer.factory
+  ): RDD[String] = {
+    rdd.mapPartitions(it=> {
+      val serializer = serializerFactory()
+      it.map(v=> new String(serializer.write(v).map(_.toChar)))
+    })
+  }
+
   def serializeAndPartitionBy(
     rdd: RDD[PValue],
     serializerFactory: () => Serializer = StringSerializer.factory,

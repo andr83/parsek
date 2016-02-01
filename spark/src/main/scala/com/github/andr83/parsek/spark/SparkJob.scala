@@ -47,7 +47,12 @@ abstract class SparkJob extends LazyLogging {
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
   }
 
-  lazy val sc = new SparkContext(sparkConfig)
+  lazy val sc = {
+    val sc = new SparkContext(sparkConfig)
+    sc.hadoopConfiguration.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
+    sc.hadoopConfiguration.set("fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
+    sc
+  }
 
   lazy val fs = FileSystem.get(hadoopConfig)
 

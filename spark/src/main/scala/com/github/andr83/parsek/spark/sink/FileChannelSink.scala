@@ -3,6 +3,7 @@ package com.github.andr83.parsek.spark.sink
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.file.{Path, Paths}
+import java.util.UUID
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.formatter.FieldFormatter
@@ -49,63 +50,78 @@ case class FileChannelSink(
   )
 
   override def sink(rdd: RDD[PValue]): Unit = {
-    val outRdd = RDDUtils.serializeAndPartitionBy(rdd, serializer, partitions)
-
-    val partitionKeys = partitions.map(_.asField.mkString("."))
-
-    if (outRdd.isEmpty()) {
+    if (rdd.isEmpty()) {
       logger.info("Rdd is empty")
     } else {
       new java.io.File(path).mkdirs()
-
-      outRdd
-        .foreachPartition(it => {
-          it.toList
-            .groupBy(_._1)
-            .foreach { case (keys, lines) =>
-              val fileName = fileNamePattern map (pattern => partitionKeys.foldLeft((0, pattern)) {
-                case ((idx, p), partitionKey) => (idx + 1, p.replaceAllLiterally("${" + partitionKey + "}", keys(idx)))
-              }._2) getOrElse keys.mkString("_")
-              val filePath = Paths.get(path, fileName)
-              val file = filePath.toFile
-
-              if (rollSize > 0) {
-                var fileSize: Long = if (file.exists()) {
-                  file.length()
-                } else 0L
-
-                val buffer = new ArrayBuffer[Byte]()
-                for (line <- lines) {
-                  val bLine = line._2.getBytes()
-                  if (fileSize + buffer.size + bLine.size >= rollSize) {
-                    if (fileSize + buffer.size >= rollSize) {
-                      rollFile(file)
-                      fileSize = 0L
-                    }
-                    if (buffer.nonEmpty) {
-                      dump(filePath, ByteBuffer.wrap(buffer.take(buffer.length - 1).toArray))
-                      fileSize += buffer.size - 1
-                      buffer.clear()
-                    }
-                  }
-
-                  buffer ++= bLine
-                  buffer += '\n'
-                }
-
-                if (buffer.nonEmpty) {
-                  if (fileSize + buffer.size >= rollSize) {
-                    rollFile(file)
-                  }
-                  dump(filePath, ByteBuffer.wrap(buffer.take(buffer.length - 1).toArray))
-                }
-              } else {
-                val buffer = ByteBuffer.wrap(lines.map(_._2).mkString("\n").getBytes())
-                dump(filePath, buffer)
+      if (partitions.nonEmpty) {
+        val partitionKeys = partitions.map(_.asField.mkString("."))
+        RDDUtils
+          .serializeAndPartitionBy(rdd, serializer, partitions)
+          .foreachPartition(it => {
+            it.toList
+              .groupBy(_._1)
+              .foreach { case (keys, lines) =>
+                val fileName = fileNamePattern map (pattern => partitionKeys.foldLeft((0, pattern)) {
+                  case ((idx, p), partitionKey) => (idx + 1, p.replaceAllLiterally("${" + partitionKey + "}", keys(idx)))
+                }._2) getOrElse keys.mkString("_")
+                writeLines(fileName, lines.map(_._2))
               }
-            }
+          })
+      } else {
+        RDDUtils
+          .serialize(rdd, serializer)
+          .mapPartitionsWithIndex {
+            case (idx, it) =>
+              val fileName = fileNamePattern map (pattern=> {
+                pattern
+                  .replaceAll("{randomUUID}", UUID.randomUUID().toString)
+                  .replaceAll("{partitionIndex}", idx.toString)
+              }) getOrElse "part-r-" + idx
+              writeLines(fileName, it.toList)
+              it
+          }
+      }
+    }
+  }
 
-        })
+  def writeLines(fileName: String, lines: List[String]): Unit = {
+    val filePath = Paths.get(path, fileName)
+    val file = filePath.toFile
+
+    if (rollSize > 0) {
+      var fileSize: Long = if (file.exists()) {
+        file.length()
+      } else 0L
+
+      val buffer = new ArrayBuffer[Byte]()
+      for (line <- lines) {
+        val bLine = line.getBytes()
+        if (fileSize + buffer.size + bLine.size >= rollSize) {
+          if (fileSize + buffer.size >= rollSize) {
+            rollFile(file)
+            fileSize = 0L
+          }
+          if (buffer.nonEmpty) {
+            dump(filePath, ByteBuffer.wrap(buffer.take(buffer.length - 1).toArray))
+            fileSize += buffer.size - 1
+            buffer.clear()
+          }
+        }
+
+        buffer ++= bLine
+        buffer += '\n'
+      }
+
+      if (buffer.nonEmpty) {
+        if (fileSize + buffer.size >= rollSize) {
+          rollFile(file)
+        }
+        dump(filePath, ByteBuffer.wrap(buffer.take(buffer.length - 1).toArray))
+      }
+    } else {
+      val buffer = ByteBuffer.wrap(lines.mkString("\n").getBytes())
+      dump(filePath, buffer)
     }
   }
 
