@@ -156,7 +156,6 @@ case class RecordField(
     if (f.isRequired) {
       throw RequiredFieldError(f, ex)
     }
-    logger.error(ex.toString)
     context.getCounter(PipeContext.InfoGroup, (ex.getClass.getSimpleName, f.name).toString()) += 1
   }
 }

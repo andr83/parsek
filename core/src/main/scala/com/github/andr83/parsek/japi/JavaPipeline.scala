@@ -1,6 +1,7 @@
 package com.github.andr83.parsek.japi
 
 import com.github.andr83.parsek._
+import com.github.andr83.parsek.pipe.Pipe
 import com.typesafe.config.Config
 
 import scala.collection.JavaConversions._
