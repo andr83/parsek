@@ -40,7 +40,7 @@ abstract class TransformPipe(field: FieldPath, as: Option[FieldPath] = None) ext
 
   def transform(value: PValue, field: Seq[String])(implicit context: PipeContext): Option[PValue] = value match {
     case PString(raw) if field.isEmpty => transformString(raw)
-    case map: PMap if field.nonEmpty => map.getValue(field) flatMap (fieldValue => transform(fieldValue, field.tail))
+    case map: PMap if field.nonEmpty => map.getValue(field.head) flatMap (fieldValue => transform(fieldValue, field.tail))
     case _ => throw new IllegalArgumentException(
       s"String transform pipe accept only string input but ${value.getClass} given. Value: $value"
     )

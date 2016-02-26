@@ -92,7 +92,7 @@ object PMap {
     if (tail.isEmpty) {
       PMap(map.value + (head -> newValue))
     } else map.value.get(head) match {
-      case Some(v: PMap) => updateValue(v, tail, newValue)
+      case Some(v: PMap) => PMap(map.value + (head -> updateValue(v, tail, newValue)))
       case None => PMap(map.value + (head -> updateValue(PMap.empty, tail, newValue)))
       case _ => throw new IllegalStateException(s"Can not update value in path $path in $map")
     }
