@@ -8,7 +8,9 @@ import com.twitter.util.Eval
   */
 object RuntimeUtils {
 
-  def compileFilterFn(filterCode: String): PValue => Boolean = {
+  def compileFilterFn(filterCode: String): PValue => Boolean = compileTransformFn(filterCode)
+
+  def compileTransformFn[T](filterCode: String): T = {
     val code =
       s"""
          |import com.github.andr83.parsek._
@@ -17,6 +19,6 @@ object RuntimeUtils {
          |$filterCode
          |}
       """.stripMargin
-    new Eval().apply[PValue => Boolean](code)
+    new Eval().apply[T](code)
   }
 }
