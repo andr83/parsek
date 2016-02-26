@@ -119,8 +119,8 @@ case class FileChannelSink(
         }
         dump(filePath, ByteBuffer.wrap(buffer.take(buffer.length - 1).toArray))
       }
-    } else {
-      val buffer = ByteBuffer.wrap(lines.mkString("\n").getBytes())
+    } else if (lines.nonEmpty){
+      val buffer = ByteBuffer.wrap((lines.mkString("\n") + "\n").getBytes())
       dump(filePath, buffer)
     }
   }
