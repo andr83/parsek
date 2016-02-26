@@ -75,7 +75,7 @@ object PathFilter {
   case class RegexFilter(pattern: Regex) extends PathFilter with LazyLogging {
     def this(config: Config) = this(config.as[String]("pattern").r)
 
-    def apply(path: Path): Boolean = Try(pattern.pattern.matcher(path.getName).matches()) match {
+    def apply(path: Path): Boolean = Try(pattern.pattern.matcher(path.toString).matches()) match {
       case Success(v) => v
       case Failure(error) =>
         logger.warn(error.toString)

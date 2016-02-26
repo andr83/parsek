@@ -30,9 +30,9 @@ object ParsekJob extends SparkJob {
         val rdd = rdds.tail.foldRight(rdds.head)(_.union(_))
         val pipeContext = repository.getContext(flow)
 
-        rdd foreachPartition (it=> {
-          pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.InputRowsGroup) += it.size
-        })
+//        rdd foreachPartition (it=> {
+//          pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.InputRowsGroup) += it.size
+//        })
         repository += (flow -> rdd)
     }
 
@@ -46,12 +46,12 @@ object ParsekJob extends SparkJob {
     repository.rdds filterKeys sinkFlows.contains foreach {
       case (flow, rdd) =>
         val sinks = sinkConfigs.get(flow).get map Sink.apply
-        val cachedRdd = rdd.cache()
+        val cachedRdd = if (sinks.length > 1) rdd.cache() else rdd
         val pipeContext = repository.getContext(flow)
 
-        cachedRdd foreachPartition (it=> {
-          pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.OutputRowsGroup) += it.size
-        })
+//        cachedRdd foreachPartition (it=> {
+//          pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.OutputRowsGroup) += it.size
+//        })
 
         sinks.foreach(_.sink(cachedRdd))
 

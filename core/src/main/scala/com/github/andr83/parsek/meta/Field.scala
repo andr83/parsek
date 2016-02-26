@@ -2,6 +2,7 @@ package com.github.andr83.parsek.meta
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.formatter.DateFormatter
+import com.github.andr83.parsek.serde.JsonSerDe
 import com.typesafe.scalalogging.slf4j.LazyLogging
 
 //import com.github.andr83.parsek.ParsekConfig._
@@ -46,7 +47,10 @@ case class StringField(
   stringCase: Option[StringCase] = None
 ) extends Field[PString] {
   override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PString] = {
-    var res = value.value.toString
+    var res = value match {
+      case _: PMap | _:PList => JsonSerDe.default.write(value).asStr
+      case _ => value.value.toString
+    }
 
     if (res.trim == "") {
       return None

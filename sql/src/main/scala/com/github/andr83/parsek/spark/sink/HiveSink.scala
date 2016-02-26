@@ -1,5 +1,6 @@
 package com.github.andr83.parsek.spark.sink
 
+import java.sql.Timestamp
 import java.util
 
 import com.github.andr83.parsek._
@@ -10,6 +11,7 @@ import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.Row
 
 import scala.collection.JavaConversions._
 
@@ -19,14 +21,11 @@ import scala.collection.JavaConversions._
   *
   * @param queries Hive query list to execute
   * @param fields sink_table schema
-  * @param numPartitions count of result partitions
-  *
   * @author andr83
   */
 case class HiveSink(
   queries: Seq[String],
-  fields: List[FieldType],
-  numPartitions: Int = 0
+  fields: List[FieldType]
 ) extends Sink {
   import HiveSink._
 
@@ -36,8 +35,7 @@ case class HiveSink(
       case qs: util.ArrayList[_] => qs.map(_.toString).toSeq
       case _ => throw new ConfigException.BadValue("query", "Query must be a string or list of strings")
     },
-    fields = config.as[List[Config]]("fields") map Field.apply,
-    numPartitions = config.as[Option[Int]]("numPartitions").getOrElse(0)
+    fields = config.as[List[Config]]("fields") map Field.apply
   )
 
   val schema = createSchema(fields)
@@ -45,17 +43,9 @@ case class HiveSink(
   override def sink(rdd: RDD[PValue]): Unit = {
     val sqlContext = new org.apache.spark.sql.hive.HiveContext(rdd.context)
 
-    var jsonRdd = rdd.mapPartitions(it => {
-      val ser = JsonSerDe()
-      it.map(v => new String(ser.write(v).map(_.toChar)))
-    })
-
-    if (numPartitions > 0) {
-      jsonRdd = jsonRdd.repartition(numPartitions)
-    }
-
-    val df = sqlContext.jsonRDD(jsonRdd, schema = schema)
-    df.registerTempTable("sink_table")
+    val root = RecordField("root", fields)
+    val rowRdd = rdd.map(createRow(_, root))
+    sqlContext.createDataFrame(rowRdd, schema).registerTempTable("sink_table")
 
     val fieldNames = fields map(_.asField) mkString ","
     queries foreach (query=> {
@@ -67,6 +57,9 @@ case class HiveSink(
 }
 
 object HiveSink {
+
+  private def jsonSerDe = JsonSerDe.default
+
   def createSchema(fields: List[FieldType]): StructType = StructType(fields map (f => StructField(f.asField, getStructFieldType(f))))
 
   def getStructFieldType(field: FieldType): DataType = field match {
@@ -79,5 +72,27 @@ object HiveSink {
     case f: RecordField => StructType(f.fields map (f => StructField(f.asField, getStructFieldType(f))))
     case f: MapField => MapType(keyType = StringType, valueType = f.field.map(getStructFieldType).getOrElse(StringType), valueContainsNull = true)
     case f: ListField => ArrayType(f.field.map(getStructFieldType).getOrElse(StringType))
+  }
+
+  def createRow(value: PValue, root: RecordField): Row = convert(value, root).asInstanceOf[Row]
+
+  def convert(value: PValue, field: FieldType): Any = (value, field) match {
+    case (PMap(map), f: RecordField) =>
+      val res = f.fields.map {
+        case innerField => map.get(innerField.asField).map(convert(_, innerField)).orNull
+      }
+      Row(res:_*)
+    case (PMap(map), f: MapField) =>
+      val innerField = f.field.getOrElse(StringField(""))
+      map.mapValues(convert(_, innerField))
+    case (v: PList, f: ListField) =>
+      val innerField = f.field.getOrElse(StringField(""))
+      v.value.map(convert(_, innerField)).toArray
+    case (v: PDate, f: DateField) => new Timestamp(v.value.getMillis)
+    case (v: PList, f: StringField) => jsonSerDe.write(v).asStr
+    case (v: PMap, f: StringField) => jsonSerDe.write(v).asStr
+    case (v: PList, _) => null
+    case (v: PMap, _) => null
+    case _ => value.value
   }
 }

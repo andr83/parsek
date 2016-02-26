@@ -68,5 +68,6 @@ case class JsonSerDe(
 }
 
 object JsonSerDe {
+  val default = apply()
   def apply(): JsonSerDe = JsonSerDe(None, DateFormatter(None))
 }
