@@ -23,7 +23,7 @@ val twitterUtilVersion = "6.27.0"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
-  version := "0.1.0",
+  version := "0.1.1",
   scalaVersion := "2.10.4",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers += Resolver.sonatypeRepo("releases"),
@@ -119,7 +119,7 @@ lazy val core = project
       "commons-codec" % "commons-codec" % commonsCodecVersion,
       "commons-lang" % "commons-lang" % commonsLangVersion,
       if (scalaVersion.value.contains("2.10"))
-        "net.ceedubs" %% "ficus" % "1.0.1"
+        "net.ceedubs" % "ficus_2.10" % "1.0.1"
       else
         "net.ceedubs" % "ficus_2.11" % "1.1.2",
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
