@@ -1,12 +1,10 @@
 package com.github.andr83.parsek.spark.streaming.pipe
 
+import com.github.andr83.parsek.PValuePredicate
 import com.github.andr83.parsek.spark.streaming.StreamFlowRepository
 import com.github.andr83.parsek.spark.util.RuntimeUtils
-import com.github.andr83.parsek.{PValuePredicate, PipeContext}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
-
-import scala.util.{Failure, Success, Try}
 
 /**
   * Split stream with 2 flows based on predicate
@@ -28,25 +26,17 @@ case class SpanDStreamPipe(predicateFactory: () => PValuePredicate, toFlows: Seq
   lazy val predicate: PValuePredicate = predicateFactory()
 
   override def run(flow: String, repository: StreamFlowRepository): Unit = {
-    val cachedStream = repository.getStream(flow).cache()
+    val spanned = repository.getStream(flow).map { r =>
+      predicate(r) -> r
+    }.cache()
 
-    val firstContext = repository.getContext(toFlows.head, flow)
-    val secondContext = repository.getContext(toFlows.last, flow)
+    val left = spanned.filter(_._1).map(_._2)
+    val right = spanned.filter(!_._1).map(_._2)
 
-    repository += (toFlows.head -> cachedStream.filter(r => Try(predicate(r)) match {
-      case Success(res) => res
-      case Failure(error) =>
-        logger.error(error.toString)
-        firstContext.getCounter(PipeContext.ErrorGroup, error.getClass.getSimpleName) += 1
-        false
-    }))
+    repository.getContext(toFlows.head, flow)
+    repository.getContext(toFlows.last, flow)
 
-    repository += (toFlows.last -> cachedStream.filter(r =>Try(predicate(r)) match {
-      case Success(res) => !res
-      case Failure(error) =>
-        logger.error(error.toString)
-        secondContext.getCounter(PipeContext.ErrorGroup, error.getClass.getSimpleName) += 1
-        false
-    }))
+    repository += (toFlows.head -> left)
+    repository += (toFlows.last -> right)
   }
 }

@@ -6,8 +6,6 @@ import com.github.andr83.parsek.spark.util.RuntimeUtils
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
-import scala.util.{Failure, Success, Try}
-
 /**
   * Split RDD with 2 flows based on predicate
   *
@@ -28,25 +26,17 @@ case class SpanRDDPipe(predicateFactory: () => PValuePredicate, toFlows: Seq[Str
   lazy val predicate: PValuePredicate = predicateFactory()
 
   override def run(flow: String, repository: FlowRepository):Unit = {
-    val cachedRdd = repository.getRdd(flow).cache()
+    val spanned = repository.getRdd(flow).map { r =>
+      predicate(r) -> r
+    }.cache()
 
-    val firstContext = repository.getContext(toFlows.head, flow)
-    val secondContext = repository.getContext(toFlows.last, flow)
+    val left = spanned.filter(_._1).values
+    val right = spanned.filter(!_._1).values
 
-    repository += (toFlows.head -> cachedRdd.filter(r => Try(predicate(r)) match {
-      case Success(res) => res
-      case Failure(error) =>
-        logger.error(error.toString)
-        firstContext.getCounter(PipeContext.ErrorGroup, error.getClass.getSimpleName) += 1
-        false
-    }))
+    repository.getContext(toFlows.head, flow)
+    repository.getContext(toFlows.last, flow)
 
-    repository += (toFlows.last -> cachedRdd.filter(r =>Try(predicate(r)) match {
-      case Success(res) => !res
-      case Failure(error) =>
-        logger.error(error.toString)
-        secondContext.getCounter(PipeContext.ErrorGroup, error.getClass.getSimpleName) += 1
-        false
-    }))
+    repository += (toFlows.head -> left)
+    repository += (toFlows.last -> right)
   }
 }
