@@ -29,18 +29,35 @@ abstract class TransformPipe(field: FieldPath, as: Option[FieldPath] = None) ext
     val res = transform(value, field)
     if (asField.isEmpty) {
       res
-    } else res.map(resValue => value match {
-      case _: PString => PMap.empty.updateValue(asField, resValue)
-      case map: PMap => map.updateValue(asField, resValue)
-      case _ => throw new IllegalArgumentException(
-        s"String transform pipe accept only string input but ${value.getClass} given. Value: $value"
-      )
-    })
+    } else {
+      if (res.isDefined) {
+        res.map(resValue => value match {
+          case _: PString => PMap.empty.updateValue(asField, resValue)
+          case map: PMap => map.updateValue(asField, resValue)
+          case _ => throw new IllegalArgumentException(
+            s"String transform pipe accept only string input but ${value.getClass} given. Value: $value"
+          )
+        })
+      } else {
+        value match {
+          case _: PString => Some(value)
+          case map: PMap =>
+            val res = map.removeValue(asField)
+            if (res.value.isEmpty) None else Some(res)
+          case _ => throw new IllegalArgumentException(
+            s"String transform pipe accept only string input but ${value.getClass} given. Value: $value"
+          )
+        }
+      }
+    }
   }
 
   def transform(value: PValue, field: Seq[String])(implicit context: PipeContext): Option[PValue] = value match {
     case PString(raw) if field.isEmpty => transformString(raw)
-    case map: PMap if field.nonEmpty => map.getValue(field.head) flatMap (fieldValue => transform(fieldValue, field.tail))
+    case map: PMap if field.nonEmpty => map.getValue(field.head) match {
+      case Some(fieldValue) => transform(fieldValue, field.tail)
+      case None => None
+    }
     case _ => throw new IllegalArgumentException(
       s"String transform pipe accept only string input but ${value.getClass} given. Value: $value"
     )

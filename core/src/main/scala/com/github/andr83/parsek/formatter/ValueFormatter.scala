@@ -9,6 +9,7 @@ import org.joda.time.DateTime
   * PValue formatter to string instance. Can be used for partitions as example.
   * @author andr83
   */
+@SerialVersionUID(1L)
 trait ValueFormatter extends Serializable {
   def apply(value: PValue): String
 }

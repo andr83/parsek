@@ -8,6 +8,7 @@ import net.ceedubs.ficus.Ficus._
 /**
  * @author andr83
  */
+@SerialVersionUID(1L)
 trait Pipe extends LazyLogging with Serializable {
   def run(value: PValue)(implicit context: PipeContext): Option[PValue]
 }

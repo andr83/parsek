@@ -9,6 +9,7 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 /**
  * @author andr83
  */
+@SerialVersionUID(1L)
 trait DateFormatter extends Serializable {
   def format(date: DateTime): PValue
   def parse(value: PValue): PDate

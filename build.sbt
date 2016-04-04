@@ -23,7 +23,7 @@ val twitterUtilVersion = "6.27.0"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
-  version := "0.1.1",
+  version := "0.1.2",
   scalaVersion := "2.10.4",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers += Resolver.sonatypeRepo("releases"),
@@ -203,9 +203,10 @@ lazy val assemblyClusterProject = project
           ExclusionRule("org.apache.hadoop"),
           ExclusionRule("org.xerial.snappy")
         ),
-        (projectID in spark).value.excludeAll(ExclusionRule("org.apache.spark")),
-        (projectID in sql).value.excludeAll(ExclusionRule("org.apache.spark")),
-        (projectID in streaming).value.excludeAll(ExclusionRule("org.apache.spark"))
+        (projectID in spark).value
+          .excludeAll(ExclusionRule("org.apache.spark")).excludeAll(sparkExclusions:_*),
+        (projectID in sql).value.excludeAll(ExclusionRule("org.apache.spark")).excludeAll(sparkExclusions:_*),
+        (projectID in streaming).value.excludeAll(ExclusionRule("org.apache.spark")).excludeAll(sparkExclusions:_*)
       )
     }
   )

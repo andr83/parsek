@@ -56,6 +56,7 @@ final case class PMap(value: Map[String, PValue]) extends PValue {
   }
 
   def updateValue(path: Seq[String], newValue: PValue): PMap = PMap.updateValue(this, path, newValue)
+  def removeValue(path: Seq[String]): PMap = PMap.removeValue(this, path)
 }
 
 final case class PList(value: List[PValue]) extends PValue {
@@ -79,6 +80,7 @@ object PValue {
 
 object PList {
   def empty = PList(List.empty[PValue])
+  def create(values: PValue*): PList = new PList(values.toList)
 }
 
 object PMap {
@@ -95,6 +97,24 @@ object PMap {
       case Some(v: PMap) => PMap(map.value + (head -> updateValue(v, tail, newValue)))
       case None => PMap(map.value + (head -> updateValue(PMap.empty, tail, newValue)))
       case _ => throw new IllegalStateException(s"Can not update value in path $path in $map")
+    }
+  }
+
+  def removeValue(map: PMap, path: Seq[String]): PMap = {
+    val head = path.head
+    val tail = path.tail
+    if (tail.isEmpty) {
+      PMap(map.value - head)
+    } else map.value.get(head) match {
+      case Some(v: PMap) =>
+        val newValue = removeValue(v, tail)
+        if (newValue.value.isEmpty) {
+          PMap(map.value - head)
+        } else {
+          PMap(map.value + (head -> newValue))
+        }
+      case None => map
+      case _ => throw new IllegalStateException(s"Can not remove value in path $path in $map")
     }
   }
 }

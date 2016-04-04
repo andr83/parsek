@@ -10,6 +10,7 @@ import scala.util.control.NonFatal
 /**
  * @author andr83
  */
+@SerialVersionUID(1L)
 class Pipeline(pipes: Pipe*) extends Serializable with LazyLogging {
   import PipeContext._
 

@@ -5,6 +5,7 @@ import com.github.andr83.parsek.meta.RecordField
 /**
  * @author nik
  */
+@SerialVersionUID(1L)
 class PipeContext extends Serializable {
   protected var counters = Map.empty[(String, String), LongCounter]
   var schema: Option[RecordField] = None

@@ -80,6 +80,7 @@ package object parsek {
     }
   }
 
+  @SerialVersionUID(1L)
   case class LongCounter(var count: Long = 0) extends Serializable {
     def +=(inc: Long): LongCounter = {
       count += inc

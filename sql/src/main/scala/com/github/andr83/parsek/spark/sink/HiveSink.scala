@@ -10,8 +10,8 @@ import com.typesafe.config.{Config, ConfigException}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types._
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.types._
 
 import scala.collection.JavaConversions._
 
@@ -40,7 +40,7 @@ case class HiveSink(
 
   val schema = createSchema(fields)
 
-  override def sink(rdd: RDD[PValue]): Unit = {
+  override def sink(rdd: RDD[PValue], time: Long): Unit = {
     val sqlContext = new org.apache.spark.sql.hive.HiveContext(rdd.context)
 
     val root = RecordField("root", fields)
