@@ -35,6 +35,9 @@ case class KafkaSource(
   def apply(job: StreamingJob): DStream[PValue] = {
     val kafkaParams = Map[String, String]("metadata.broker.list" -> brokers) ++
       reset.map(v=> Map("auto.offset.reset" -> v)).getOrElse(Map.empty[String, String])
+
+    val ds = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](job.ssc, kafkaParams, topics)
+
     offsetsFile match {
       case Some(file) =>
         var topicsOffset = topics.map(_ ->(0, 0L)).toMap
@@ -55,12 +58,12 @@ case class KafkaSource(
           KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder, (String, String)](
             job.ssc, kafkaParams, fromOffset, messageHandler)
         } else {
-          KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](job.ssc, kafkaParams, topics)
+          KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](
+            job.ssc, kafkaParams, topics)
         }
 
         ds.transform { rdd =>
           val offsetRanges = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
-
           // Storing current offsets to file if it was set
           offsetsFile foreach { file =>
             FileUtils.writeLines(file, offsetRanges.map(o => {
@@ -73,7 +76,6 @@ case class KafkaSource(
           rdd.map{case (k, v) => PString(v)}
         }
       case None =>
-        val ds = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](job.ssc, kafkaParams, topics)
         ds.map{case (k, v) => PString(v)}
     }
   }

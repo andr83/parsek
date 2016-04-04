@@ -1,20 +1,19 @@
 package com.github.andr83.parsek.spark.streaming
 
+import com.github.andr83.parsek.PValue
 import com.github.andr83.parsek.spark.SparkPipeContext
-import com.github.andr83.parsek.{PValue, PipeContext}
-import org.apache.spark.SparkContext
 import org.apache.spark.streaming.dstream.DStream
 
 /**
   * Repository to get access to streams and their contexts in flow
   *
-  * @param sc SparkContext to create SparkPipeContext instances
   *
   * @author andr83
   */
-class StreamFlowRepository(sc: SparkContext) {
+@SerialVersionUID(1L)
+class StreamFlowRepository extends Serializable {
   protected var streamByFlow: Map[String, DStream[PValue]] = Map.empty[String, DStream[PValue]]
-  protected var contextByFlow: Map[String, PipeContext] = Map.empty[String, PipeContext]
+  protected var contextByFlow: Map[String, SparkPipeContext] = Map.empty[String, SparkPipeContext]
 
   def streams = streamByFlow
 
@@ -24,7 +23,7 @@ class StreamFlowRepository(sc: SparkContext) {
     * @param flow flow name
     * @return
     */
-  def getContext(flow: String): PipeContext = getContext(flow, flow)
+  def getContext(flow: String): SparkPipeContext = getContext(flow, flow)
 
   /**
     * Return PipeContext for current flow. If context is not available it will copied from currentFlow or created
@@ -34,14 +33,14 @@ class StreamFlowRepository(sc: SparkContext) {
     *
     * @return
     */
-  def getContext(flow: String, currentFlow: String): PipeContext = contextByFlow.getOrElse(flow, {
-    val context = SparkPipeContext(sc)
+  def getContext(flow: String, currentFlow: String): SparkPipeContext = contextByFlow.getOrElse(flow, {
+    val context = SparkPipeContext(flow)
     contextByFlow = contextByFlow + (flow -> context)
 
-    if (currentFlow != flow && contextByFlow.contains(currentFlow)) {
-      contextByFlow.get(currentFlow).get.getCounters foreach {
-        case ((groupName, name), count) => context.getCounter(groupName, name) += count
-      }
+    if (currentFlow != flow) {
+      contextByFlow.get(currentFlow) foreach (currentContext=> {
+        SparkPipeContext.copy(currentContext, context)
+      })
     }
 
     context

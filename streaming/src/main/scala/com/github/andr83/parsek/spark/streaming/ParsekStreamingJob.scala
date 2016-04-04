@@ -1,12 +1,14 @@
 package com.github.andr83.parsek.spark.streaming
 
 import com.github.andr83.parsek.PipeContext
+import com.github.andr83.parsek.spark.SparkPipeContext
 import com.github.andr83.parsek.spark.sink.Sink
 import com.github.andr83.parsek.spark.streaming.pipe.DStreamPipe
 import com.github.andr83.parsek.spark.streaming.source.StreamingSource
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
+import org.apache.spark.storage.StorageLevel
 
 
 /**
@@ -20,26 +22,17 @@ object ParsekStreamingJob extends StreamingJob {
       .groupBy(_.as[Option[String]]("flow") getOrElse DefaultFlow)
       .mapValues(_.map(StreamingSource.apply))
 
-//    var streamsByFlow: Map[String, (PipeContext, DStream[PValue])] = sourcesByFlow.mapValues(sources => {
-//      val streams = sources.map(_ (this))
-//      val stream = streams.tail.foldRight(streams.head)(_.union(_))
-//
-//      val pipeContext = SparkPipeContext(ssc.sparkContext)
-//      stream foreachRDD  (rdd=> {
-//        pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.InputRowsGroup) += rdd.count()
-//      })
-//      pipeContext -> stream
-//    })
-    val repository = new StreamFlowRepository(ssc.sparkContext)
+    val repository = new StreamFlowRepository()
 
     sourcesByFlow foreach {
-      case (flow, sources)=>
+      case (flow, sources) =>
         val streams = sources.map(_ (this))
         val stream = streams.tail.foldRight(streams.head)(_.union(_))
 
         val pipeContext = repository.getContext(flow)
 
-        stream foreachRDD  (rdd=> {
+        stream foreachRDD (rdd => {
+          SparkPipeContext.setGlobalContext(rdd.sparkContext)
           pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.InputRowsGroup) += rdd.count()
         })
 
@@ -54,17 +47,17 @@ object ParsekStreamingJob extends StreamingJob {
     val sinkFlows = sinkConfigs.keySet
 
     repository.streams filterKeys sinkFlows.contains foreach {
-      case (flow, stream) => stream.foreachRDD(rdd => {
+      case (flow, stream) => stream.foreachRDD((rdd, time) => {
+        SparkPipeContext.setGlobalContext(rdd.sparkContext)
+
         val sinks = sinkConfigs.get(flow).get map Sink.apply
-        val cachedRdd = rdd.cache()
+        val cachedRdd = rdd.persist(StorageLevel.MEMORY_AND_DISK)
 
         val pipeContext = repository.getContext(flow)
+        val counter = pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.OutputRowsGroup)
+        counter += cachedRdd.count()
 
-        cachedRdd foreachPartition (it=> {
-          pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.OutputRowsGroup) += it.size
-        })
-
-        sinks.foreach(_.sink(cachedRdd))
+        sinks.foreach(_.sink(cachedRdd, time.milliseconds))
 
         logger.info(s"Flow $flow counters:")
         pipeContext.getCounters.toSeq.sortWith(_._1.toString() < _._1.toString()) foreach { case (key, count) =>
@@ -73,11 +66,9 @@ object ParsekStreamingJob extends StreamingJob {
       })
     }
 
-    ssc.start()
-    ssc.awaitTermination()
   }
 
-  def nextPipe(pipes: List[Config], repository: StreamFlowRepository):Unit = pipes match {
+  def nextPipe(pipes: List[Config], repository: StreamFlowRepository): Unit = pipes match {
     case head :: tail =>
       runPipe(head, repository)
       nextPipe(tail, repository)
@@ -88,11 +79,5 @@ object ParsekStreamingJob extends StreamingJob {
     val pipe = DStreamPipe(pipeConfig)
     val flow = pipeConfig.as[Option[String]]("flow") getOrElse DefaultFlow
     pipe.run(flow, repository)
-//    // doing in this ugly way because streams ++ pipe.run not work
-//    streams.flatMap {
-//      case m@(streamFlow, (streamContext, stream)) if streamFlow == flow =>
-//        Map(m) ++ pipe.run(streamFlow, stream)(streamContext).mapValues(streamContext -> _)
-//      case m => Map(m)
-//    }
   }
 }
