@@ -12,7 +12,7 @@ import org.apache.spark.rdd.RDD
   * @author andr83
   */
 abstract class Sink extends LazyLogging {
-  def sink(rdd: RDD[PValue]): Unit
+  def sink(rdd: RDD[PValue], time: Long): Unit
 }
 
 object Sink {

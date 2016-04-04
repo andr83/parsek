@@ -1,6 +1,6 @@
 package com.github.andr83.parsek.spark
 
-import com.github.andr83.parsek.{PValue, PipeContext}
+import com.github.andr83.parsek.PValue
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
@@ -13,7 +13,7 @@ import org.apache.spark.rdd.RDD
   */
 class  FlowRepository(sc: SparkContext) {
   protected var rddByFlow: Map[String, RDD[PValue]] = Map.empty[String, RDD[PValue]]
-  protected var contextByFlow: Map[String, PipeContext] = Map.empty[String, PipeContext]
+  protected var contextByFlow: Map[String, SparkPipeContext] = Map.empty[String, SparkPipeContext]
 
   def rdds = rddByFlow
 
@@ -23,7 +23,7 @@ class  FlowRepository(sc: SparkContext) {
     * @param flow flow name
     * @return
     */
-  def getContext(flow: String): PipeContext = getContext(flow, flow)
+  def getContext(flow: String): SparkPipeContext = getContext(flow, flow)
 
   /**
     * Return PipeContext for current flow. If context is not available it will copied from currentFlow or created
@@ -33,14 +33,14 @@ class  FlowRepository(sc: SparkContext) {
     *
     * @return
     */
-  def getContext(flow: String, currentFlow: String): PipeContext = contextByFlow.getOrElse(flow, {
-    val context = SparkPipeContext(sc)
+  def getContext(flow: String, currentFlow: String): SparkPipeContext = contextByFlow.getOrElse(flow, {
+    val context = SparkPipeContext(flow)
     contextByFlow = contextByFlow + (flow -> context)
 
-    if (currentFlow != flow && contextByFlow.contains(currentFlow)) {
-      contextByFlow.get(currentFlow).get.getCounters foreach {
-        case ((groupName, name), count) => context.getCounter(groupName, name) += count
-      }
+    if (currentFlow != flow) {
+      contextByFlow.get(currentFlow) foreach (currentContext=> {
+        SparkPipeContext.copy(currentContext, context)
+      })
     }
 
     context

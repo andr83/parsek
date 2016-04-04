@@ -17,7 +17,7 @@ class LogCountSink(level: Level = Level.INFO) extends Sink {
 
   def this(config: Config) = this(Level.toLevel(config.as[Option[String]]("level").getOrElse("info").toUpperCase))
 
-  override def sink(rdd: RDD[PValue]): Unit = {
+  override def sink(rdd: RDD[PValue], time: Long): Unit = {
     val count = rdd.count().toString
     level match {
       case Level.INFO => logger.info(count)

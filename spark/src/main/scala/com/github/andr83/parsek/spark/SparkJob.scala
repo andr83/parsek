@@ -39,13 +39,17 @@ abstract class SparkJob extends LazyLogging {
 
   def parseOptions(args: Array[String]): Boolean = optionParser.parse(args)
 
-  lazy val sparkConfig = {
-    new SparkConf()
+  def newSparkConfig() = {
+    val sc = new SparkConf()
       .setAppName(getClass.getSimpleName)
       .setMaster(sparkMaster)
       .set("spark.executor.memory", sparkMemory)
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    sparkCores foreach (cores=> sc.set("spark.cores.max", cores.toString))
+    sc
   }
+
+  lazy val sparkConfig = newSparkConfig()
 
   lazy val sc = {
     val sc = new SparkContext(sparkConfig)
@@ -72,16 +76,23 @@ abstract class SparkJob extends LazyLogging {
   lazy val resourceFactory = ResourceFactory()
 
   var sparkMemory = "1G"
+  var sparkCores: Option[Int] = None
   var sparkMaster = "local[*]"
   var sparkLogLevel = Level.WARN
   var hadoopUser: Option[String] = None
   var hadoopConfigDirectory = ""
-  var config = ConfigFactory.empty()
   var params = Map.empty[String, String]
+
+  @volatile private var _config = ConfigFactory.empty()
+  def config = _config
 
   opt[String]("sparkMemory") foreach {
     sparkMemory = _
   } text "spark.executor.memory value, default 1G "
+
+  opt[Int]("sparkCores") foreach {cores=>
+    sparkCores = Some(cores)
+  } text "spark.cores.max value, default is unlimited"
 
   opt[String]("sparkMaster") foreach { value =>
     sparkMaster = value
@@ -101,7 +112,7 @@ abstract class SparkJob extends LazyLogging {
   } text "Path to hadoop config directory with core-site.xml and hdfs-site.xml files"
 
   opt[String]('c', "config") required() foreach { path =>
-    config = if (path.startsWith("hdfs://")) {
+    _config = if (path.startsWith("hdfs://")) {
       (for (
         in <- managed(fs.open(path))
       ) yield IOUtils.toString(in)).either match {
@@ -157,11 +168,11 @@ abstract class SparkJob extends LazyLogging {
       })
       if (res.nonEmpty) {
         val newConfig = ConfigFactory.parseMap(mapAsJavaMap(Map("resources" -> mapAsJavaMap(res.toMap))))
-        config = newConfig.withFallback(config)
+        _config = newConfig.withFallback(config)
       }
     })
-    config = config.withFallback(params)
-    config = config.resolve()
+    _config = _config.withFallback(params)
+    _config = _config.resolve()
   }
 
   def afterJob() = {}

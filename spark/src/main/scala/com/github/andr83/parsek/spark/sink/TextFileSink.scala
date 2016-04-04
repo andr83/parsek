@@ -5,6 +5,7 @@ import java.util.UUID
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.formatter.FieldFormatter
 import com.github.andr83.parsek.serde.{SerDe, Serializer, StringSerializer}
+import com.github.andr83.parsek.spark.util.RDDUtils.{DefaultPartitioner, FieldsPartitioner}
 import com.github.andr83.parsek.spark.util.{HadoopUtils, RDDUtils}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
@@ -18,10 +19,12 @@ import scala.collection.JavaConversions._
 /**
   * Save RDD as a compressed text file
   *
-  * @param path path to directory where to save
-  * @param codec compression codec class
+  * @param path       path to directory where to save
+  * @param codec      compression codec class
   * @param serializer factory function which return Serializer instance
-  *
+  * @param partitions
+  * @param numPartitions
+  * @param fileNamePattern
   * @author andr83
   */
 case class TextFileSink(
@@ -29,6 +32,7 @@ case class TextFileSink(
   codec: Option[Class[_ <: CompressionCodec]],
   serializer: () => Serializer,
   partitions: Seq[FieldFormatter] = Seq.empty[FieldFormatter],
+  numPartitions: Option[Int] = None,
   fileNamePattern: Option[String] = None
 ) extends Sink {
 
@@ -41,22 +45,24 @@ case class TextFileSink(
     partitions = if (config.hasPath("partitions"))
       FieldFormatter(config.getList("partitions"))
     else Seq.empty[FieldFormatter],
+    numPartitions = config.as[Option[Int]]("numPartitions"),
     fileNamePattern = config.as[Option[String]]("fileNamePattern")
   )
 
-  override def sink(rdd: RDD[PValue]): Unit = {
+  override def sink(rdd: RDD[PValue], time: Long): Unit = {
     try {
-      if (partitions.nonEmpty) {
-        val partitionKeys = partitions.map(_.asField.mkString("."))
+      if (partitions.nonEmpty || fileNamePattern.nonEmpty) {
+        val pattern = fileNamePattern map (pattern => {
+          pattern
+            .replaceAllLiterally("${randomUUID}", UUID.randomUUID().toString)
+            .replaceAllLiterally("${timeInMs}", time.toString)
+        })
+
+        val partitioner = if (partitions.isEmpty) DefaultPartitioner(pattern)
+        else FieldsPartitioner(partitions, pattern)
+
         RDDUtils
-          .serializeAndPartitionBy(rdd, serializer, partitions)
-          .map {
-            case (keys, line) =>
-              val fileName = fileNamePattern map (pattern => partitionKeys.foldLeft((0, pattern)) {
-                case ((idx, p), partitionKey) => (idx + 1, p.replaceAllLiterally("${" + partitionKey + "}", keys(idx)))
-              }._2) getOrElse keys.mkString("_")
-              fileName -> line
-          }
+          .serializeAndPartitionBy(rdd, serializer, partitioner, numPartitions)
           .saveAsHadoopFile(
             path,
             classOf[String],
@@ -65,26 +71,10 @@ case class TextFileSink(
             codec = codec
           )
       } else {
-        val outRdd = RDDUtils.serialize(rdd, serializer)
-        if (fileNamePattern.nonEmpty) {
-          outRdd.mapPartitionsWithIndex {
-            case (idx, it) =>
-              val fileName = fileNamePattern map (pattern=> {
-                pattern
-                  .replaceAll("{randomUUID}", UUID.randomUUID().toString)
-                  .replaceAll("{partitionIndex}", idx.toString)
-              }) getOrElse "part-r-" + idx
-              it.map(line=> fileName -> line)
-          }
-          .saveAsHadoopFile(
-            path,
-            classOf[String],
-            classOf[String],
-            classOf[TextFileSink.RDDMultipleTextOutputFormat],
-            codec = codec
-          )
-        } else {
-          outRdd.saveAsTextFile(path)
+        val serializedRdd = RDDUtils.serialize(rdd, serializer)
+        codec match {
+          case Some(c) => serializedRdd.saveAsTextFile(path, c)
+          case None => serializedRdd.saveAsTextFile(path)
         }
       }
     } catch {
