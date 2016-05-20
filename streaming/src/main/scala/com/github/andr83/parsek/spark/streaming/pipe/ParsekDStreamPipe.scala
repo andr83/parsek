@@ -2,7 +2,6 @@ package com.github.andr83.parsek.spark.streaming.pipe
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.pipe.Pipe
-import com.github.andr83.parsek.spark.SparkPipeContext
 import com.github.andr83.parsek.spark.streaming.StreamFlowRepository
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
@@ -24,7 +23,6 @@ case class ParsekDStreamPipe(pipeConfig: Config, toFlow: Option[String]) extends
     val stream = repository.getStream(flow)
 
     val res = stream.transform(rdd => {
-      SparkPipeContext.setGlobalContext(rdd.sparkContext)
       implicit val context = repository.getContext(toFlow.getOrElse(flow), flow)
       rdd.mapPartitions(it => {
         val pipeline = if (pipeConfig.hasPath("pipe")) {

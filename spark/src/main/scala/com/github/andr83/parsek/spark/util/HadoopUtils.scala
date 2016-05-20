@@ -33,21 +33,27 @@ object HadoopUtils {
     FileSystem.get(conf)
   }
 
-  def readString(path: String): String = if (path.startsWith("hdfs://")) {
+  def readString(path: String, fs: FileSystem = fs): String = {
     (for (
       in <- managed(fs.open(new Path(path)))
-    ) yield IOUtils.toString(in)) either match {
+    ) yield IOUtils.toString(in)).either match {
       case Right(content) => content
       case Left(errors) => throw errors.head
     }
-  } else Source.fromFile(path).mkString
+  }
 
-  def readBytes(path: String): Array[Byte] = if (path.startsWith("hdfs://")) {
+  def readBytes(path: String, fs: FileSystem = fs): Array[Byte] = if (path.startsWith("hdfs://")) {
     (for (
       in <- managed(fs.open(new Path(path)))
-    ) yield IOUtils.toByteArray(in)) either match {
+    ) yield IOUtils.toByteArray(in)).either match {
       case Right(content) => content
       case Left(errors) => throw errors.head
     }
   } else Source.fromFile(path).map(_.toByte).toArray
+
+  def writeString(data: String, path: String, overwrite: Boolean = true, fs: FileSystem = fs): Either[Seq[Throwable], Unit] = {
+    (for (
+      out <- managed(fs.create(new Path(path)))
+    ) yield IOUtils.write(data, out)).either
+  }
 }

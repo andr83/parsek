@@ -1,20 +1,21 @@
 package com.github.andr83.parsek.spark.streaming.source
 
-import java.nio.file.{Files, Paths}
+import java.net.URI
 
 import com.github.andr83.parsek.spark.streaming.StreamingJob
-import com.github.andr83.parsek.util.FileUtils
+import com.github.andr83.parsek.spark.streaming.source.KafkaSource.KafkaListener
+import com.github.andr83.parsek.spark.util.HadoopUtils
 import com.github.andr83.parsek.{PString, PValue}
 import com.typesafe.config.Config
 import kafka.common.TopicAndPartition
 import kafka.message.MessageAndMetadata
 import kafka.serializer.StringDecoder
 import net.ceedubs.ficus.Ficus._
-import org.apache.spark.streaming.dstream.DStream
-import org.apache.spark.streaming.kafka.{HasOffsetRanges, KafkaUtils}
-
-import scala.io.Source
-import scala.util.Failure
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.streaming.dstream.{DStream, InputDStream}
+import org.apache.spark.streaming.kafka._
+import org.apache.spark.streaming.scheduler.{StreamingListener, StreamingListenerBatchCompleted}
+import org.apache.spark.{Logging, SparkException}
 
 /**
   * @author andr83
@@ -22,61 +23,99 @@ import scala.util.Failure
 case class KafkaSource(
   brokers: String,
   topics: Set[String],
-  offsetsFile: Option[String] = None,
+  offsetsDir: Option[String] = None,
   reset: Option[String]
 ) extends StreamingSource {
   def this(config: Config) = this(
     brokers = config.as[String]("brokers"),
     topics = config.as[Set[String]]("topics"),
-    offsetsFile = config.as[Option[String]]("offsetsFile"),
+    offsetsDir = config.as[Option[String]]("offsetsDir"),
     reset = config.as[Option[String]]("reset")
   )
 
   def apply(job: StreamingJob): DStream[PValue] = {
     val kafkaParams = Map[String, String]("metadata.broker.list" -> brokers) ++
-      reset.map(v=> Map("auto.offset.reset" -> v)).getOrElse(Map.empty[String, String])
+      reset.map(v => Map("auto.offset.reset" -> v)).getOrElse(Map.empty[String, String])
 
-    val ds = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](job.ssc, kafkaParams, topics)
+    offsetsDir match {
+      case Some(dir) =>
+        val fs = FileSystem.get(URI.create(dir), job.hadoopConfig)
+        job.ssc.addStreamingListener(new KafkaListener(fs, dir))
 
-    offsetsFile match {
-      case Some(file) =>
-        var topicsOffset = topics.map(_ ->(0, 0L)).toMap
-        if (Files.exists(Paths.get(file))) {
-          for (line <- Source.fromFile(file).getLines()) {
-            val Array(topic: String, partition: String, offset: String) = line.split(",")
-            topicsOffset += topic ->(partition.toInt, offset.toLong)
-          }
+        if (!fs.exists(new Path(dir))) {
+          fs.mkdirs(new Path(dir))
         }
 
-        val fromOffset = topicsOffset.map {
-          case (topic, (partition, offset)) => TopicAndPartition(topic, partition) -> offset
+        def readOffsets(job: StreamingJob, dir: String): Map[TopicAndPartition, Long] = {
+          job.listFilesOnly(dir, Seq.empty)
+            .map(file => {
+              val line = HadoopUtils.readString(file, fs)
+              val Array(topic: String, partition: String, offset: String) = line.split(",")
+              TopicAndPartition(topic, partition.toInt) -> offset.toLong
+            })
+            .groupBy(_._1)
+            .mapValues(it => {
+              it.minBy(_._2)._2
+            })
+            .filterKeys(tp => topics.contains(tp.topic))
         }
 
-        val messageHandler = (mmd: MessageAndMetadata[String, String]) => (mmd.key(), mmd.message())
-
-        val ds = if (reset.isEmpty) {
-          KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder, (String, String)](
-            job.ssc, kafkaParams, fromOffset, messageHandler)
-        } else {
+        val ds: InputDStream[(String, String)] = if (reset == Some("smallest")) {
           KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](
             job.ssc, kafkaParams, topics)
-        }
+        } else {
+          val kc = new PublicKafkaCluster(kafkaParams)
 
-        ds.transform { rdd =>
-          val offsetRanges = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
-          // Storing current offsets to file if it was set
-          offsetsFile foreach { file =>
-            FileUtils.writeLines(file, offsetRanges.map(o => {
-              Seq(o.topic, o.partition, o.untilOffset).mkString(",")
-            }), append = false) match {
-              case Failure(e) => logger.error(e.getMessage, e)
-              case _ =>
+          val result = for {
+            topicPartitions <- kc.getPartitions(topics).right
+            leaderOffsets <- kc.getLatestLeaderOffsets(topicPartitions).right
+          } yield leaderOffsets
+
+          val fromOffset = result.fold(
+            errs => throw new SparkException(errs.mkString("\n")),
+            topicOffsets => {
+              val offsets = topicOffsets.mapValues(_.offset) ++ readOffsets(job, dir)
+              offsets
             }
-          }
-          rdd.map{case (k, v) => PString(v)}
+          )
+
+          logger.info(s"Started kafka stream from offsets: $fromOffset")
+
+          val messageHandler = (mmd: MessageAndMetadata[String, String]) => (mmd.key(), mmd.message())
+
+          KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder, (String, String)](
+            job.ssc, kafkaParams, fromOffset, messageHandler)
         }
+        ds.map { case (k, v) => PString(v) }
       case None =>
-        ds.map{case (k, v) => PString(v)}
+        val ds = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](job.ssc, kafkaParams, topics)
+        ds.map { case (k, v) => PString(v) }
+    }
+  }
+}
+
+object KafkaSource {
+
+  class KafkaListener(fs: FileSystem, offsetsDir: String) extends StreamingListener with Logging {
+
+    override def onBatchCompleted(batchCompleted: StreamingListenerBatchCompleted): Unit = {
+      val bi = batchCompleted.batchInfo
+      val offsets = bi.streamIdToInputInfo.values.flatMap(info => {
+        info.metadata.get("offsets").map(x => {
+          x.asInstanceOf[List[OffsetRange]]
+        }) getOrElse List.empty[OffsetRange]
+      })
+
+      log.info(s"Batch completed in ${bi.processingDelay}ms processed ${bi.numRecords} records. Offsets: $offsets")
+
+      offsets.foreach(o => {
+        val offsetsFile = offsetsDir + s"/${o.topic}-${o.partition}"
+        val line = Seq(o.topic, o.partition, o.untilOffset).mkString(",")
+        HadoopUtils.writeString(line, offsetsFile, overwrite = true, fs) match {
+          case Left(errors) => errors foreach (e => log.error(e.getMessage, e))
+          case _ =>
+        }
+      })
     }
   }
 

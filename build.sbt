@@ -4,7 +4,7 @@ import sbt._
 val commonsCodecVersion = "1.1"
 val commonsLangVersion = "2.6"
 val guavaVersion = "14.0"
-val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.+")
+val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.0")
 val javaxServletVersion = "3.0.1"
 val jacksonVersion = "2.4.4"
 val json4SVersion = "3.2.10"
@@ -17,13 +17,13 @@ val scalaTimeVersion = "1.8.+"
 val scoptVersion = "3.3.+"
 val slf4jVersion = "1.7.5"
 val snappyJavaVersion = "1.1.2"
-val sparkVersion = sys.props.getOrElse("sparkVersion", default = "1.5.2")
+val sparkVersion = sys.props.getOrElse("sparkVersion", default = "1.6.0")
 val typesafeConfigVersion = "1.2.+"
 val twitterUtilVersion = "6.27.0"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
-  version := "0.1.2",
+  version := "0.1.3",
   scalaVersion := "2.10.4",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers += Resolver.sonatypeRepo("releases"),

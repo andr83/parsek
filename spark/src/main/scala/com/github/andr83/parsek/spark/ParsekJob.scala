@@ -2,14 +2,17 @@ package com.github.andr83.parsek.spark
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.github.andr83.parsek._
+import com.github.andr83.parsek.spark.SparkPipeContext.{LongCountersParam, StringTuple2}
 import com.github.andr83.parsek.spark.pipe.RDDPipe
 import com.github.andr83.parsek.spark.sink.Sink
 import com.github.andr83.parsek.spark.source.Source
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
+import org.apache.spark.storage.StorageLevel
 
 import scala.collection.mutable
+import scala.collection.mutable.{HashMap => MutableHashMap}
 
 /**
   * @author andr83
@@ -28,13 +31,25 @@ object ParsekJob extends SparkJob {
   override def job(): Unit = {
     val startTime = System.currentTimeMillis()
 
+    val flows = (config.as[List[Config]]("sources")
+      .map(_.as[Option[String]]("flow") getOrElse DefaultFlow) ++
+      config.as[List[Config]]("sinks")
+        .map(_.as[Option[String]]("flow") getOrElse DefaultFlow) ++
+      config.as[List[Config]]("pipes")
+        .flatMap(c=> c.as[Option[String]]("toFlow") map(f=>Seq(f)) orElse c.as[Option[Seq[String]]]("toFlows") getOrElse Seq.empty[String]))
+      .toSet
+
+    val accumulators = flows.map (flow=> {
+      val acc = sc.accumulable(MutableHashMap.empty[StringTuple2, Long])(LongCountersParam)
+      flow -> acc
+    }).toMap
+
+    val repository = new FlowRepository(accumulators)
+
     val sourcesByFlow = config.as[List[Config]]("sources")
       .groupBy(_.as[Option[String]]("flow") getOrElse DefaultFlow)
       .mapValues(_.map(Source.apply))
 
-    val repository = new FlowRepository(sc)
-
-    SparkPipeContext.setGlobalContext(sc)
     sourcesByFlow foreach {
       case (flow, sources) =>
         val rdds = sources.map(_ (this))
@@ -57,15 +72,11 @@ object ParsekJob extends SparkJob {
 
     repository.rdds filterKeys sinkFlows.contains foreach {
       case (flow, rdd) =>
-        SparkPipeContext.setGlobalContext(rdd.sparkContext)
         val sinks = sinkConfigs.get(flow).get map Sink.apply
-        val cachedRdd = if (sinks.length > 1) rdd.cache() else rdd
+        val cachedRdd = rdd.persist(StorageLevel.MEMORY_AND_DISK_SER)
         val pipeContext = repository.getContext(flow)
 
         pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.OutputRowsGroup) += cachedRdd.count()
-//        cachedRdd foreachPartition (it=> {
-//          pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.OutputRowsGroup) += it.size
-//        })
 
         sinks.foreach(_.sink(cachedRdd, startTime))
 

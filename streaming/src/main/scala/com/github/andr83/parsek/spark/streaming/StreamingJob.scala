@@ -10,17 +10,6 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
 abstract class StreamingJob extends SparkJob {
 
   var ssc: StreamingContext = null
-//  lazy val ssc = {
-//    val ssc = checkpointDirectory map (dir=> {
-//      StreamingContext.getOrCreate(dir, () => {
-//        val ssc = new StreamingContext(sparkConfig, batchDuration)
-//        ssc.checkpoint(dir)
-//        ssc
-//      }, hadoopConfig)
-//    }) getOrElse new StreamingContext(sparkConfig, batchDuration)
-//
-//    ssc
-//  }
 
   override lazy val sparkConfig = {
     val conf = newSparkConfig()
@@ -43,7 +32,7 @@ abstract class StreamingJob extends SparkJob {
 
   opt[String]("checkpointDir") foreach {
     f => checkpointDirectory = Some(f)
-  } text "Streaming batch duration interval in seconds. Default 1 second."
+  } text "Checkpoint directory to store current progress."
 
   opt[Int]("maxRate") foreach {
     rate => maxRate = Some(rate)

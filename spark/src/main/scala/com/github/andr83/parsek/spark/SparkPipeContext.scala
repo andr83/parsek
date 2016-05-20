@@ -1,5 +1,6 @@
 package com.github.andr83.parsek.spark
 
+import com.github.andr83.parsek.spark.SparkPipeContext.LongCountersAccumulable
 import com.github.andr83.parsek.{LongCounter, PipeContext}
 import org.apache.spark._
 import org.apache.spark.serializer.JavaSerializer
@@ -9,17 +10,14 @@ import scala.collection.mutable.{HashMap => MutableHashMap}
 /**
  * @author andr83
  */
-case class SparkPipeContext(accName: String) extends PipeContext {
-  import SparkPipeContext._
-
-  private[this] def acc = getAccumulator(accName)
+case class SparkPipeContext(acc: LongCountersAccumulable) extends PipeContext {
 
   override def getCounter(groupName: String, name: String): LongCounter = {
     val key = (groupName, name)
     if (!counters.contains(key)) {
       val counter = new LongCounter() {
         override def +=(inc: Long): LongCounter = {
-          getAccumulator(accName) += key -> inc
+          acc += key -> inc
           super.+=(inc)
         }
       }
@@ -35,20 +33,15 @@ object SparkPipeContext {
   type StringTuple2 = (String, String)
   type LongCountersAccumulable = Accumulable[MutableHashMap[StringTuple2, Long], (StringTuple2, Long)]
 
-  @volatile private var globalContext: SparkContext = null
   @volatile private var accumulators = Map.empty[String, LongCountersAccumulable]
 
-  def setGlobalContext(context: SparkContext): Unit = SparkPipeContext synchronized {
-    globalContext = context
-  }
-
-  def getAccumulator(name: String): LongCountersAccumulable = SparkPipeContext synchronized {
-    accumulators getOrElse(name, {
-      val acc = globalContext.accumulable(MutableHashMap.empty[StringTuple2, Long])(LongCountersParam)
-      accumulators = accumulators + (name -> acc)
-      acc
-    })
-  }
+//  def getAccumulator(name: String): LongCountersAccumulable = SparkPipeContext synchronized {
+//    accumulators getOrElse(name, {
+//      val acc = globalContext.accumulable(MutableHashMap.empty[StringTuple2, Long])(LongCountersParam)
+//      accumulators = accumulators + (name -> acc)
+//      acc
+//    })
+//  }
 
   implicit object LongCountersParam extends AccumulableParam[MutableHashMap[StringTuple2, Long], (StringTuple2, Long)] {
 
