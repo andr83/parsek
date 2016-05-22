@@ -12,7 +12,11 @@ import org.apache.spark.rdd.RDD
 /**
   * @author andr83
   */
-case class SequenceFileSource(path: Seq[String], filters: Seq[PathFilter]) extends Source {
+case class SequenceFileSource(
+  path: Seq[String],
+  filters: Seq[PathFilter],
+  minPartitions: Int = 0
+) extends Source {
 
   def this(config: Config) = this(
     path = config.getAnyRef("path") match {
@@ -21,7 +25,8 @@ case class SequenceFileSource(path: Seq[String], filters: Seq[PathFilter]) exten
     },
     filters = config.as[Option[List[Config]]]("filters") map (filters => {
       filters.map(f => PathFilter(f))
-    }) getOrElse Seq.empty[PathFilter]
+    }) getOrElse Seq.empty[PathFilter],
+    minPartitions = config.as[Option[Int]]("minPartitions") getOrElse 0
   )
 
   // Default filter to exclude all files with underscore prefix like _SUCCESS
@@ -35,7 +40,9 @@ case class SequenceFileSource(path: Seq[String], filters: Seq[PathFilter]) exten
     if (files.isEmpty) {
       job.sc.emptyRDD[PValue]
     } else {
-      job.sc.sequenceFile(files.mkString(","), classOf[String], classOf[Text]).map(kv=> PString(kv._2.toString))
+      val partitions = if (minPartitions > 0) minPartitions else job.sc.defaultMinPartitions
+      job.sc.sequenceFile(files.mkString(","), classOf[String], classOf[Text], partitions)
+        .map(kv=> PString(kv._2.toString))
     }
   }
 }
