@@ -9,7 +9,6 @@ import com.github.andr83.parsek.spark.source.Source
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import org.apache.spark.storage.StorageLevel
 
 import scala.collection.mutable
 import scala.collection.mutable.{HashMap => MutableHashMap}
@@ -20,6 +19,12 @@ import scala.collection.mutable.{HashMap => MutableHashMap}
 object ParsekJob extends SparkJob {
 
   val DefaultFlow = "default"
+
+  var enableStats = false
+  opt[Unit]("enableStats") action { (_, _) => {
+    enableStats = true
+  }
+  }
 
   lazy val actorSystem = ActorSystem("ParsekJob")
   private[ParsekJob] val actors = mutable.Map.empty[String, ActorRef]
@@ -36,10 +41,10 @@ object ParsekJob extends SparkJob {
       config.as[List[Config]]("sinks")
         .map(_.as[Option[String]]("flow") getOrElse DefaultFlow) ++
       config.as[List[Config]]("pipes")
-        .flatMap(c=> c.as[Option[String]]("toFlow") map(f=>Seq(f)) orElse c.as[Option[Seq[String]]]("toFlows") getOrElse Seq.empty[String]))
+        .flatMap(c => c.as[Option[String]]("toFlow") map (f => Seq(f)) orElse c.as[Option[Seq[String]]]("toFlows") getOrElse Seq.empty[String]))
       .toSet
 
-    val accumulators = flows.map (flow=> {
+    val accumulators = flows.map(flow => {
       val acc = sc.accumulable(MutableHashMap.empty[StringTuple2, Long])(LongCountersParam)
       flow -> acc
     }).toMap
@@ -56,10 +61,9 @@ object ParsekJob extends SparkJob {
         val rdd = rdds.tail.foldRight(rdds.head)(_.union(_))
         val pipeContext = repository.getContext(flow)
 
-        pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.InputRowsGroup) += rdd.count()
-//        rdd foreachPartition (it=> {
-//          pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.InputRowsGroup) += it.size
-//        })
+        if (enableStats) {
+          pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.InputRowsGroup) += rdd.count()
+        }
         repository += (flow -> rdd)
     }
 
@@ -73,12 +77,13 @@ object ParsekJob extends SparkJob {
     repository.rdds filterKeys sinkFlows.contains foreach {
       case (flow, rdd) =>
         val sinks = sinkConfigs.get(flow).get map Sink.apply
-        val cachedRdd = rdd.persist(StorageLevel.MEMORY_AND_DISK_SER)
         val pipeContext = repository.getContext(flow)
 
-        pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.OutputRowsGroup) += cachedRdd.count()
+        if (enableStats) {
+          pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.OutputRowsGroup) += rdd.count()
+        }
 
-        sinks.foreach(_.sink(cachedRdd, startTime))
+        sinks.foreach(_.sink(rdd, startTime))
 
         logger.info(s"Flow $flow counters:")
         logger.info(s"Duration: ${System.currentTimeMillis() - startTime}ms")
@@ -99,6 +104,6 @@ object ParsekJob extends SparkJob {
     val flow = pipeConfig.as[Option[String]]("flow") getOrElse DefaultFlow
     val pipe = RDDPipe(pipeConfig)
 
-    pipe.run(flow,repository)
+    pipe.run(flow, repository)
   }
 }
