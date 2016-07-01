@@ -175,7 +175,9 @@ abstract class SparkJob extends LazyLogging {
     _config = _config.resolve()
   }
 
-  def afterJob() = {}
+  def afterJob() = {
+    sc.stop()
+  }
 
   def job()
 

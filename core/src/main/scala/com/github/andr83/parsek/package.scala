@@ -33,12 +33,12 @@ package object parsek {
   implicit def mapToConfig(map: Map[String, AnyRef]): Config = ConfigFactory.parseMap(map)
 
   implicit class RichString(val str: String) extends AnyVal {
-    def asBytes: Array[Byte] = str.map(_.toByte).toArray
+    def asBytes: Array[Byte] = str.getBytes("UTF-8")
     def asFieldPath: Seq[String] = if(str.isEmpty) Seq.empty[String] else str.split('.')
   }
 
   implicit class RichByteArray(val arr: Array[Byte]) extends AnyVal {
-    def asStr: String = new String(arr.map(_.toChar))
+    def asStr: String = new String(arr, "UTF-8")
   }
 
   implicit class RichPValue(val pv: PValue) extends AnyVal {
