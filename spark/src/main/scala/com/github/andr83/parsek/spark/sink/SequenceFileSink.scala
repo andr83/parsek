@@ -9,8 +9,8 @@ import com.github.andr83.parsek.spark.util.RDDUtils.{DefaultPartitioner, FieldsP
 import com.github.andr83.parsek.spark.util.{HadoopUtils, RDDUtils}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
-import org.apache.hadoop.io.NullWritable
 import org.apache.hadoop.io.compress.CompressionCodec
+import org.apache.hadoop.io.{NullWritable, Text}
 import org.apache.hadoop.mapred.lib.MultipleSequenceFileOutputFormat
 import org.apache.spark.rdd.RDD
 
@@ -55,10 +55,11 @@ case class SequenceFileSink(
 
         RDDUtils
           .serializeAndPartitionBy(rdd, serializer, partitioner, numPartitions)
+          .mapValues(new Text(_))
           .saveAsHadoopFile(
             path,
             classOf[NullWritable],
-            classOf[String],
+            classOf[Text],
             classOf[SequenceFileSink.RDDMultipleSequenceOutputFormat],
             codec = codec
           )
