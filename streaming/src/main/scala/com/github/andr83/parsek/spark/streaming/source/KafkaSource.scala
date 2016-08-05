@@ -12,10 +12,10 @@ import kafka.message.MessageAndMetadata
 import kafka.serializer.StringDecoder
 import net.ceedubs.ficus.Ficus._
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.Logging
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka._
 import org.apache.spark.streaming.scheduler.{StreamingListener, StreamingListenerBatchCompleted}
-import org.apache.spark.{Logging, SparkException}
 
 /**
   * @author andr83
@@ -71,20 +71,20 @@ case class KafkaSource(
             leaderOffsets <- kc.getLatestLeaderOffsets(topicPartitions).right
           } yield leaderOffsets
 
-          val fromOffset = result.fold(
-            errs => throw new SparkException(errs.mkString("\n")),
-            topicOffsets => {
-              val offsets = topicOffsets.mapValues(_.offset) ++ readOffsets(job, dir)
-              offsets
-            }
-          )
+          result match {
+            //on Kafka getting offsets failed fallback to read string from now
+            case Left(errs) =>
+              logger.error(errs mkString "\n")
+              KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](job.ssc, kafkaParams, topics)
 
-          logger.info(s"Started kafka stream from offsets: $fromOffset")
+            case Right(topicOffsets) =>
+              val fromOffset = topicOffsets.mapValues (_.offset) ++ readOffsets (job, dir)
+              logger.info(s"Started kafka stream from offsets: $fromOffset")
 
-          val messageHandler = (mmd: MessageAndMetadata[String, String]) => (mmd.key(), mmd.message())
-
-          KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder, (String, String)](
-            job.ssc, kafkaParams, fromOffset, messageHandler)
+              val messageHandler = (mmd: MessageAndMetadata[String, String]) => (mmd.key(), mmd.message())
+              KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder, (String, String)](
+                job.ssc, kafkaParams, fromOffset, messageHandler)
+          }
         }
         ds.map { case (k, v) => PString(v) }
       case None =>
