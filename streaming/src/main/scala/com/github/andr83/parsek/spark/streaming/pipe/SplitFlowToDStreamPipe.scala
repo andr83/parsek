@@ -2,7 +2,7 @@ package com.github.andr83.parsek.spark.streaming.pipe
 
 import com.github.andr83.parsek.PValue
 import com.github.andr83.parsek.spark.streaming.StreamFlowRepository
-import com.github.andr83.parsek.spark.util.RuntimeUtils
+import com.github.andr83.parsek.util.RuntimeUtils
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 

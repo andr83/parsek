@@ -4,6 +4,8 @@ import com.github.andr83.parsek._
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
+import scala.util.Try
+
 /**
  * @author andr83
  */
@@ -55,7 +57,13 @@ abstract class TransformPipe(field: FieldPath, as: Option[FieldPath] = None) ext
   def transform(value: PValue, field: Seq[String])(implicit context: PipeContext): Option[PValue] = value match {
     case PString(raw) if field.isEmpty => transformString(raw)
     case map: PMap if field.nonEmpty => map.getValue(field.head) match {
-      case Some(fieldValue) => transform(fieldValue, field.tail)
+      case Some(fieldValue) =>
+        val res = Try(transform(fieldValue, field.tail)) recover {
+          case err: Throwable =>
+            context.getCounter(PipeContext.WarnGroup, (err.getClass.getSimpleName, as.getOrElse(field)).toString()) += 1
+            None
+        }
+        res.get
       case None => None
     }
     case _ => throw new IllegalArgumentException(

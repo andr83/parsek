@@ -2,7 +2,7 @@ package com.github.andr83.parsek.spark.streaming.pipe
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.spark.streaming.StreamFlowRepository
-import com.github.andr83.parsek.spark.util.RuntimeUtils
+import com.github.andr83.parsek.util.RuntimeUtils
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
@@ -13,7 +13,6 @@ import scala.util.{Failure, Success, Try}
   *
   * @param predicateFactory factory function to return PValue => Boolean instance
   * @param toFlow New flow name after filtering, by default it's current flow
-  *
   * @author andr83
   */
 case class FilterDStreamPipe(predicateFactory: () => PValuePredicate, toFlow: Option[String] = None) extends DStreamPipe {

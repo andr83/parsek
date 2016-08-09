@@ -2,7 +2,7 @@ package com.github.andr83.parsek.spark.streaming.pipe
 
 import com.github.andr83.parsek.PValuePredicate
 import com.github.andr83.parsek.spark.streaming.StreamFlowRepository
-import com.github.andr83.parsek.spark.util.RuntimeUtils
+import com.github.andr83.parsek.util.RuntimeUtils
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
@@ -11,7 +11,6 @@ import net.ceedubs.ficus.Ficus._
   *
   * @param predicateFactory factory function to return PValue => Boolean instance
   * @param toFlows Flows name to split
-  *
   * @author andr83
   */
 case class SpanDStreamPipe(predicateFactory: () => PValuePredicate, toFlows: Seq[String]) extends DStreamPipe {

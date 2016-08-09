@@ -23,7 +23,7 @@ val twitterUtilVersion = "6.27.0"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
-  version := "0.1.4",
+  version := "0.1.5",
   scalaVersion := "2.10.4",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers += Resolver.sonatypeRepo("releases"),
@@ -118,6 +118,7 @@ lazy val core = project
 //      "net.ceedubs" %% "ficus" % ficusVersion,
       "commons-codec" % "commons-codec" % commonsCodecVersion,
       "commons-lang" % "commons-lang" % commonsLangVersion,
+      "com.twitter" %% "util-eval" % twitterUtilVersion,
       if (scalaVersion.value.contains("2.10"))
         "net.ceedubs" % "ficus_2.10" % "1.0.1"
       else
@@ -134,8 +135,7 @@ lazy val spark = project
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % scoptVersion,
       "org.apache.spark" %% "spark-core" % sparkVersion
-        excludeAll (sparkExclusions: _*),
-      "com.twitter" %% "util-eval" % twitterUtilVersion
+        excludeAll (sparkExclusions: _*)
     ) ++ hadoopDependencies
   )
   .dependsOn(core)
