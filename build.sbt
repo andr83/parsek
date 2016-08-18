@@ -3,6 +3,7 @@ import sbt._
 
 val commonsCodecVersion = "1.1"
 val commonsLangVersion = "2.6"
+val clickhouseJdbcVersion = "0.1.3"
 val guavaVersion = "14.0"
 val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.0")
 val javaxServletVersion = "3.0.1"
@@ -41,7 +42,7 @@ lazy val assemblySettings = Seq(
     case PathList("javax", xs@_*) => MergeStrategy.last
     case PathList("org", "apache", xs@_*) => MergeStrategy.last
     case PathList("org", "eclipse", "jetty", "orbit", xs@_*) => MergeStrategy.last
-    case PathList("com", "google", xs@_*) => MergeStrategy.last
+//    case PathList("com", "google", xs@_*) => MergeStrategy.last
     case PathList("com", "esotericsoftware", xs@_*) => MergeStrategy.last
     case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
     case PathList("META-INF", "ECLIPSEF.RSA") => MergeStrategy.discard
@@ -148,7 +149,8 @@ lazy val sql = project
     libraryDependencies ++= Seq(
       "org.apache.spark" %% "spark-sql" % sparkVersion
         excludeAll (sparkExclusions: _*),
-      "org.apache.spark" %% "spark-hive" % sparkVersion
+      "org.apache.spark" %% "spark-hive" % sparkVersion,
+      "ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion
     )
   )
   .dependsOn(spark)
@@ -179,7 +181,21 @@ lazy val assemblyProject = project
   .settings(assemblySettings: _*)
   .settings(
     name := "parsek-assembly",
-    assemblyJarName in assembly := s"parsek-assembly-${version.value}.jar"
+    assemblyJarName in assembly := s"parsek-assembly-${version.value}.jar",
+    assemblyShadeRules in assembly ++= Seq(
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion),
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpcore" % "4.3.3"),
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpclient" % "4.3.6"),
+      ShadeRule.rename("com.google.**" -> "shade.com.google.@1").inLibrary("ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion),
+      ShadeRule.rename("com.google.**" -> "shade.com.google.@1").inLibrary("com.google.guava" % "guava" % "19.0")
+    )
+  )
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.google.guava" % "guava" % "19.0",
+      "org.apache.httpcomponents" % "httpcore" % "4.3.3",
+      "org.apache.httpcomponents" % "httpclient" % "4.3.6"
+    )
   )
   .settings(inConfig(JarConfig)
   (Classpaths.configSettings ++ Defaults.configTasks ++ baseAssemblySettings ++ commonSettings ++ assemblySettings ++ Seq(
@@ -193,8 +209,20 @@ lazy val assemblyClusterProject = project
   .settings(commonSettings: _*)
   .settings(assemblySettings: _*)
   .settings(
+    libraryDependencies ++= Seq(
+      "com.google.guava" % "guava" % "19.0",
+      "org.apache.httpcomponents" % "httpcore" % "4.3.3",
+      "org.apache.httpcomponents" % "httpclient" % "4.3.6"
+    ),
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false),
-    assemblyJarName in assembly := s"parsek-cluster-${version.value}.jar"
+    assemblyJarName in assembly := s"parsek-cluster-${version.value}.jar",
+    assemblyShadeRules in assembly ++= Seq(
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion),
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpcore" % "4.3.3"),
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpclient" % "4.3.6"),
+      ShadeRule.rename("com.google.**" -> "shade.com.google.@1").inLibrary("ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion),
+      ShadeRule.rename("com.google.**" -> "shade.com.google.@1").inLibrary("com.google.guava" % "guava" % "19.0")
+    )
   )
   .settings(
     projectDependencies := {

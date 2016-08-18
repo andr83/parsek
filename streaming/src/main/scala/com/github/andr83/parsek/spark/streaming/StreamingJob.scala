@@ -13,6 +13,7 @@ abstract class StreamingJob extends SparkJob {
 
   override lazy val sparkConfig = {
     val conf = newSparkConfig()
+    conf.set("spark.driver.allowMultipleContexts", "true")
     maxRate foreach (rate=> {
       conf.set("spark.streaming.backpressure.enabled", "true")
       conf.set("spark.streaming.receiver.maxRate", rate.toString)

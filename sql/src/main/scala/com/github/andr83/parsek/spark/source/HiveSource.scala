@@ -22,7 +22,7 @@ case class HiveSource(
   import HiveSource._
 
   def this(config: Config) = this(
-    queries = config.getAnyRef("query") match {
+    queries = config.getAnyRef("queries") match {
       case q: String => Seq(q)
       case qs: util.ArrayList[_] => qs.map(_.toString).toSeq
       case _ => throw new ConfigException.BadValue("query", "Query must be a string or list of strings")
