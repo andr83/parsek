@@ -45,7 +45,7 @@ case class ClickhouseSink(
       if (it.nonEmpty) {
         withConnection(conn => {
           val tableSchema: RecordField = withConnection(conn => clickhouseTableDescription(conn, tableName))
-          val fieldsToSave = tableSchema.fields.filter(f => fields.contains(f.name))
+          val fieldsToSave = tableSchema.fields.filter(f => fields.contains(f.asField))
 
           val queryStart = s"INSERT INTO $tableName (${fieldsToSave.map(_.name).mkString(",")}) VALUES "
           val query = new mutable.StringBuilder(queryStart)
@@ -59,7 +59,7 @@ case class ClickhouseSink(
           }).toList
           query.append(rowValues.mkString(","))
           logger.info(s"Storing ${rowValues.size} rows.")
-          //logger.info(query.toString())
+          logger.info(query.toString())
           conn.createStatement().execute(query.toString())
         })
       }
@@ -69,6 +69,14 @@ case class ClickhouseSink(
 
 object ClickhouseSink {
   lazy val stringSerializer = StringSerializer.factory()
+
+  private[this] val numberStringify = PartialFunction[PValue, String] {
+    case PInt(n) => n.toString
+    case PLong(n) => n.toString
+    case PDouble(n) => n.toString
+    case PBool(b) => if (b) "1" else "0"
+    case x => throw new IllegalStateException(s"Expected number value got $x")
+  }
 
   def withConnection[A](block: Connection => A)(implicit dsFactory: ()=> ClickHouseDataSource): A = {
     Class.forName("ru.yandex.clickhouse.ClickHouseDriver")
@@ -114,9 +122,15 @@ object ClickhouseSink {
     })
 
   def strValues(row: PMap, fields: Seq[FieldType]): Seq[String] = fields.map(f=> {
-    row.getValue(f.name) match {
+    row.getValue(f.asField) match {
       case Some(v) => stringify(v, f)
-      case None => "'NULL'"
+      case None => f match {
+        case f: IntField => "0"
+        case f: LongField => "0"
+        case f: DoubleField => "0"
+        case f: BooleanField => "0"
+        case _ => "'NULL'"
+      }
     }
   })
 
@@ -126,24 +140,27 @@ object ClickhouseSink {
         case PBool(b) => if (b) "1" else "0"
         case PInt(n) if n >= 0 && n <= 1 => n.toString
         case PLong(n) if n >= 0 && n <= 1 => n.toString
-        case x => throw new IllegalStateException(s"Expected boolean value for field ${field.name} got $x")
+        case x => throw new IllegalStateException(s"Expected boolean value for field ${field.asField} got $x")
       }
     case f: DateField =>
       value match {
         case PDate(d) => ClickHouseUtil.quote(f.pattern.format(d).value.toString)
         case PLong(n) => ClickHouseUtil.quote(f.pattern.format(new DateTime(n)).value.toString)
-        case x => throw new IllegalStateException(s"Expected date value for field ${field.name} got $x")
+        case x => throw new IllegalStateException(s"Expected date value for field ${field.asField} got $x")
       }
     case f: RecordField =>
       value match {
         case m:PMap => "[" + strValues(m, f.fields).mkString(",") + "]"
-        case x => throw new IllegalStateException(s"Expected Record value for field ${field.name} got $x")
+        case x => throw new IllegalStateException(s"Expected Record value for field ${field.asField} got $x")
       }
     case f: ListField =>
       value match {
         case PList(list) => "[" + list.map(v=> ClickHouseUtil.quote(stringSerializer.write(v).asStr)).mkString(",") + "]"
-        case x => throw new IllegalStateException(s"Expected List value for field ${field.name} got $x")
+        case x => throw new IllegalStateException(s"Expected List value for field ${field.asField} got $x")
       }
+    case f: IntField => numberStringify(value)
+    case f: LongField => numberStringify(value)
+    case f: DoubleField => numberStringify(value)
     case _ => ClickHouseUtil.quote(stringSerializer.write(value).asStr)
   }
 }
