@@ -80,6 +80,7 @@ case class TextFileSink(
     } catch {
       case e: Exception =>
         logger.error(e.toString, e)
+        throw e
     }
   }
 }

@@ -58,7 +58,8 @@ abstract class StreamingJob extends SparkJob {
 
     sys.ShutdownHookThread {
       logger.info("Gracefully stopping Spark Streaming Application")
-      ssc.stop(stopSparkContext = true, stopGracefully = true)
+      ssc.getState()
+      ssc.stop(stopSparkContext = true, stopGracefully = false)
       logger.info("Application stopped")
     }
 

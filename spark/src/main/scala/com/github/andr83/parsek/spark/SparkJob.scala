@@ -41,7 +41,7 @@ abstract class SparkJob extends LazyLogging {
 
   def newSparkConfig() = {
     val sc = new SparkConf()
-      .setAppName(getClass.getSimpleName)
+      .setAppName(appName)
       .setMaster(sparkMaster)
       .set("spark.executor.memory", sparkMemory)
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
@@ -75,6 +75,7 @@ abstract class SparkJob extends LazyLogging {
 
   lazy val resourceFactory = ResourceFactory()
 
+  var appName = getClass.getSimpleName
   var sparkMemory = "1G"
   var sparkCores: Option[Int] = None
   var sparkMaster = "local[*]"
@@ -85,6 +86,10 @@ abstract class SparkJob extends LazyLogging {
 
   @volatile private var _config = ConfigFactory.empty()
   def config = _config
+
+  opt[String]("appName") foreach {
+    appName = _
+  } text "Application name for Spark job"
 
   opt[String]("sparkMemory") foreach {
     sparkMemory = _

@@ -15,7 +15,11 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.Logging
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka._
-import org.apache.spark.streaming.scheduler.{StreamingListener, StreamingListenerBatchCompleted}
+import org.apache.spark.streaming.scheduler._
+import org.apache.spark.streaming.{StreamingContext, StreamingContextState}
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
 
 /**
   * @author andr83
@@ -40,7 +44,7 @@ case class KafkaSource(
     offsetsDir match {
       case Some(dir) =>
         val fs = FileSystem.get(URI.create(dir), job.hadoopConfig)
-        job.ssc.addStreamingListener(new KafkaListener(fs, dir))
+        job.ssc.addStreamingListener(new KafkaListener(job.ssc, fs, dir))
 
         if (!fs.exists(new Path(dir))) {
           fs.mkdirs(new Path(dir))
@@ -78,7 +82,7 @@ case class KafkaSource(
               KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](job.ssc, kafkaParams, topics)
 
             case Right(topicOffsets) =>
-              val fromOffset = topicOffsets.mapValues (_.offset) ++ readOffsets (job, dir)
+              val fromOffset = topicOffsets.mapValues(_.offset) ++ readOffsets(job, dir)
               logger.info(s"Started kafka stream from offsets: $fromOffset")
 
               val messageHandler = (mmd: MessageAndMetadata[String, String]) => (mmd.key(), mmd.message())
@@ -96,9 +100,15 @@ case class KafkaSource(
 
 object KafkaSource {
 
-  class KafkaListener(fs: FileSystem, offsetsDir: String) extends StreamingListener with Logging {
+  class KafkaListener(ssc: StreamingContext, fs: FileSystem, offsetsDir: String) extends StreamingListener with Logging {
+
+    private[this] var isFailed = false
 
     override def onBatchCompleted(batchCompleted: StreamingListenerBatchCompleted): Unit = {
+      if (isFailed) {
+        return
+      }
+
       val bi = batchCompleted.batchInfo
       val offsets = bi.streamIdToInputInfo.values.flatMap(info => {
         info.metadata.get("offsets").map(x => {
@@ -106,7 +116,22 @@ object KafkaSource {
         }) getOrElse List.empty[OffsetRange]
       })
 
-      log.info(s"Batch completed in ${bi.processingDelay}ms processed ${bi.numRecords} records. Offsets: $offsets")
+      val failures = bi.outputOperationInfos.values.flatMap(info => {
+        info.failureReason
+      })
+
+      if (failures.nonEmpty) {
+        isFailed = true
+        log.info(s"Batch ${bi.batchTime} completed in ${bi.processingDelay.getOrElse(0)} ms with failure. Offsets: $offsets")
+        Future {
+          if (ssc.getState() != StreamingContextState.STOPPED) {
+            ssc.stop(stopSparkContext = true, stopGracefully = false)
+          }
+        }
+        return
+      }
+
+      log.info(s"Batch ${bi.batchTime} completed in ${bi.processingDelay.getOrElse(0)} ms processed ${bi.numRecords} records. Offsets: $offsets")
 
       offsets.foreach(o => {
         val offsetsFile = offsetsDir + s"/${o.topic}-${o.partition}"
