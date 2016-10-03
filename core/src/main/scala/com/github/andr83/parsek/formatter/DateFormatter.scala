@@ -30,7 +30,7 @@ object TimestampFormatter extends DateFormatter {
 }
 
 class JodaDateFormatter(formatterFactory: () => DateTimeFormatter) extends DateFormatter {
-  val formatter = formatterFactory()
+  lazy val formatter = formatterFactory()
   override def format(date: DateTime): PString = date.toString(formatter)
 
   override def parse(value: PValue): PDate = value match {
