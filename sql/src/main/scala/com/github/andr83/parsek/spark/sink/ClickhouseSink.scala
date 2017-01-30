@@ -12,7 +12,7 @@ import com.typesafe.config.{Config, ConfigException}
 import net.ceedubs.ficus.Ficus._
 import org.apache.spark.rdd.RDD
 import org.joda.time.DateTime
-import ru.yandex.clickhouse.response.ClickHouseResultSet
+import ru.yandex.clickhouse.util.TypeUtils
 import ru.yandex.clickhouse.{ClickHouseDataSource, ClickHouseUtil}
 
 import scala.collection.JavaConversions._
@@ -58,8 +58,9 @@ case class ClickhouseSink(
             case x => throw new IllegalStateException(s"Expected PMap value but got $x")
           }).toList
           query.append(rowValues.mkString(","))
+          logger.info(rowValues.head)
           logger.info(s"Storing ${rowValues.size} rows.")
-          logger.info(query.toString())
+          //logger.info(query.toString())
           conn.createStatement().execute(query.toString())
         })
       }
@@ -106,7 +107,7 @@ object ClickhouseSink {
 
         override def next(): FieldType = {
           val name = columns.getString(1)
-          ClickHouseResultSet.toSqlType(columns.getString(2)) match {
+          TypeUtils.toSqlType(columns.getString(2)) match {
             case Types.BIGINT => LongField(name)
             case Types.INTEGER => IntField(name)
             case Types.VARCHAR => StringField(name)
@@ -134,6 +135,8 @@ object ClickhouseSink {
     }
   })
 
+  def quote(str: String) = "'" + ClickHouseUtil.escape(str) + "'"
+
   def stringify(value: PValue, field: FieldType): String = field match {
     case f: BooleanField =>
       value match {
@@ -144,8 +147,8 @@ object ClickhouseSink {
       }
     case f: DateField =>
       value match {
-        case PDate(d) => ClickHouseUtil.quote(f.pattern.format(d).value.toString)
-        case PLong(n) => ClickHouseUtil.quote(f.pattern.format(new DateTime(n)).value.toString)
+        case PDate(d) => quote(f.pattern.format(d).value.toString)
+        case PLong(n) => quote(f.pattern.format(new DateTime(n)).value.toString)
         case x => throw new IllegalStateException(s"Expected date value for field ${field.asField} got $x")
       }
     case f: RecordField =>
@@ -155,12 +158,12 @@ object ClickhouseSink {
       }
     case f: ListField =>
       value match {
-        case PList(list) => "[" + list.map(v=> ClickHouseUtil.quote(stringSerializer.write(v).asStr)).mkString(",") + "]"
+        case PList(list) => "[" + list.map(v=> quote(stringSerializer.write(v).asStr)).mkString(",") + "]"
         case x => throw new IllegalStateException(s"Expected List value for field ${field.asField} got $x")
       }
     case f: IntField => numberStringify(value)
     case f: LongField => numberStringify(value)
     case f: DoubleField => numberStringify(value)
-    case _ => ClickHouseUtil.quote(stringSerializer.write(value).asStr)
+    case _ => quote(stringSerializer.write(value).asStr)
   }
 }
