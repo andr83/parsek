@@ -3,7 +3,9 @@ import sbt._
 
 val commonsCodecVersion = "1.1"
 val commonsLangVersion = "2.6"
-val clickhouseJdbcVersion = "0.1.3"
+val commonsHttpCore =  "4.4.4"
+val commonsHttpClient =  "4.5.2"
+val clickhouseJdbcVersion = "0.1.14"
 val guavaVersion = "14.0"
 val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.0")
 val javaxServletVersion = "3.0.1"
@@ -24,8 +26,8 @@ val twitterUtilVersion = "6.27.0"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
-  version := "0.1.5",
-  scalaVersion := "2.10.4",
+  version := "0.1.6",
+  scalaVersion := "2.10.6",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers += Resolver.sonatypeRepo("releases"),
   externalResolvers := Seq(
@@ -99,7 +101,7 @@ lazy val core = project
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value
     ),
-    crossScalaVersions := Seq("2.11.0", "2.10.4"),
+    crossScalaVersions := Seq("2.11.0", "2.10.6"),
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "org.slf4j" % "slf4j-simple" % slf4jVersion % "test",
@@ -184,8 +186,8 @@ lazy val assemblyProject = project
     assemblyJarName in assembly := s"parsek-assembly-${version.value}.jar",
     assemblyShadeRules in assembly ++= Seq(
       ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion),
-      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpcore" % "4.3.3"),
-      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpclient" % "4.3.6"),
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpcore" % commonsHttpCore),
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpclient" % commonsHttpClient),
       ShadeRule.rename("com.google.**" -> "shade.com.google.@1").inLibrary("ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion),
       ShadeRule.rename("com.google.**" -> "shade.com.google.@1").inLibrary("com.google.guava" % "guava" % "19.0")
     )
@@ -193,8 +195,8 @@ lazy val assemblyProject = project
   .settings(
     libraryDependencies ++= Seq(
       "com.google.guava" % "guava" % "19.0",
-      "org.apache.httpcomponents" % "httpcore" % "4.3.3",
-      "org.apache.httpcomponents" % "httpclient" % "4.3.6"
+      "org.apache.httpcomponents" % "httpcore" % commonsHttpCore,
+      "org.apache.httpcomponents" % "httpclient" % commonsHttpClient
     )
   )
   .settings(inConfig(JarConfig)
@@ -211,15 +213,15 @@ lazy val assemblyClusterProject = project
   .settings(
     libraryDependencies ++= Seq(
       "com.google.guava" % "guava" % "19.0",
-      "org.apache.httpcomponents" % "httpcore" % "4.3.3",
-      "org.apache.httpcomponents" % "httpclient" % "4.3.6"
+      "org.apache.httpcomponents" % "httpcore" % commonsHttpCore,
+      "org.apache.httpcomponents" % "httpclient" % commonsHttpClient
     ),
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false),
     assemblyJarName in assembly := s"parsek-cluster-${version.value}.jar",
     assemblyShadeRules in assembly ++= Seq(
       ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion),
-      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpcore" % "4.3.3"),
-      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpclient" % "4.3.6"),
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpcore" % commonsHttpCore),
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpclient" % commonsHttpClient),
       ShadeRule.rename("com.google.**" -> "shade.com.google.@1").inLibrary("ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion),
       ShadeRule.rename("com.google.**" -> "shade.com.google.@1").inLibrary("com.google.guava" % "guava" % "19.0")
     )
