@@ -44,6 +44,7 @@ abstract class SparkJob extends LazyLogging {
       .setAppName(appName)
       .setMaster(sparkMaster)
       .set("spark.executor.memory", sparkMemory)
+      .set("spark.driver.allowMultipleContexts", "true")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     sparkCores foreach (cores=> sc.set("spark.cores.max", cores.toString))
     sc
