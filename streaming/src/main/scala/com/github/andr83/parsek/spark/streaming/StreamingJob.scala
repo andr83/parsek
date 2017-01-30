@@ -66,4 +66,6 @@ abstract class StreamingJob extends SparkJob {
     ssc.start()
     ssc.awaitTermination()
   }
+
+  override def afterJob() {}
 }

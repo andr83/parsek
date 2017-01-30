@@ -7,12 +7,12 @@ import com.github.andr83.parsek.spark.streaming.source.KafkaSource.KafkaListener
 import com.github.andr83.parsek.spark.util.HadoopUtils
 import com.github.andr83.parsek.{PString, PValue}
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.slf4j.LazyLogging
 import kafka.common.TopicAndPartition
 import kafka.message.MessageAndMetadata
 import kafka.serializer.StringDecoder
 import net.ceedubs.ficus.Ficus._
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.spark.Logging
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka._
 import org.apache.spark.streaming.scheduler._
@@ -100,7 +100,7 @@ case class KafkaSource(
 
 object KafkaSource {
 
-  class KafkaListener(ssc: StreamingContext, fs: FileSystem, offsetsDir: String) extends StreamingListener with Logging {
+  class KafkaListener(ssc: StreamingContext, fs: FileSystem, offsetsDir: String) extends StreamingListener with LazyLogging {
 
     private[this] var isFailed = false
 
@@ -122,7 +122,7 @@ object KafkaSource {
 
       if (failures.nonEmpty) {
         isFailed = true
-        log.info(s"Batch ${bi.batchTime} completed in ${bi.processingDelay.getOrElse(0)} ms with failure. Offsets: $offsets")
+        logger.info(s"Batch ${bi.batchTime} completed in ${bi.processingDelay.getOrElse(0)} ms with failure. Offsets: $offsets")
         Future {
           if (ssc.getState() != StreamingContextState.STOPPED) {
             ssc.stop(stopSparkContext = true, stopGracefully = false)
@@ -131,13 +131,13 @@ object KafkaSource {
         return
       }
 
-      log.info(s"Batch ${bi.batchTime} completed in ${bi.processingDelay.getOrElse(0)} ms processed ${bi.numRecords} records. Offsets: $offsets")
+      logger.info(s"Batch ${bi.batchTime} completed in ${bi.processingDelay.getOrElse(0)} ms processed ${bi.numRecords} records. Offsets: $offsets")
 
       offsets.foreach(o => {
         val offsetsFile = offsetsDir + s"/${o.topic}-${o.partition}"
         val line = Seq(o.topic, o.partition, o.untilOffset).mkString(",")
         HadoopUtils.writeString(line, offsetsFile, overwrite = true, fs) match {
-          case Left(errors) => errors foreach (e => log.error(e.getMessage, e))
+          case Left(errors) => errors foreach (e => logger.error(e.getMessage, e))
           case _ =>
         }
       })
