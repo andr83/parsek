@@ -165,8 +165,11 @@ lazy val streaming = project
     libraryDependencies ++= Seq(
       "org.apache.spark" %% "spark-streaming" % sparkVersion
         excludeAll (sparkExclusions: _*),
-      "org.apache.spark" %% "spark-streaming-kafka" % sparkVersion
-        excludeAll (sparkExclusions: _*),
+      if (sparkVersion.startsWith("2.")) {
+        ("org.apache.spark" %% "spark-streaming-kafka-0-10" % sparkVersion) excludeAll (sparkExclusions: _*)
+      } else {
+        ("org.apache.spark" %% "spark-streaming-kafka" % sparkVersion) excludeAll (sparkExclusions: _*)
+      },
       "org.apache.spark" %% "spark-streaming-flume" % sparkVersion
         excludeAll (sparkExclusions: _*)
     )

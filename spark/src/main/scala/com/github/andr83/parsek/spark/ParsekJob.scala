@@ -1,6 +1,5 @@
 package com.github.andr83.parsek.spark
 
-import akka.actor.{ActorRef, ActorSystem, Props}
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.spark.SparkPipeContext.{LongCountersParam, StringTuple2}
 import com.github.andr83.parsek.spark.pipe.RDDPipe
@@ -10,7 +9,6 @@ import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 
-import scala.collection.mutable
 import scala.collection.mutable.{HashMap => MutableHashMap}
 
 /**
@@ -24,13 +22,6 @@ object ParsekJob extends SparkJob {
   opt[Unit]("enableStats") action { (_, _) => {
     enableStats = true
   }
-  }
-
-  lazy val actorSystem = ActorSystem("ParsekJob")
-  private[ParsekJob] val actors = mutable.Map.empty[String, ActorRef]
-
-  def getActor(name: String, props: Props): ActorRef = ParsekJob.synchronized {
-    actors.getOrElseUpdate(name, actorSystem.actorOf(props))
   }
 
   override def job(): Unit = {
