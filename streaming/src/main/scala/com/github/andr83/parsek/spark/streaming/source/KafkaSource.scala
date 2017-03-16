@@ -3,6 +3,7 @@ package com.github.andr83.parsek.spark.streaming.source
 import java.net.URI
 
 import com.github.andr83.parsek.spark.streaming.StreamingJob
+import com.github.andr83.parsek.spark.streaming.source.KafkaSource.ZookeeperConfig
 import com.github.andr83.parsek.spark.util.HadoopUtils
 import com.github.andr83.parsek.{PString, PValue}
 import com.typesafe.config.Config
@@ -10,13 +11,16 @@ import com.typesafe.scalalogging.slf4j.LazyLogging
 import kafka.common.TopicAndPartition
 import kafka.message.MessageAndMetadata
 import kafka.serializer.StringDecoder
+import kafka.utils.{ZKGroupTopicDirs, ZkUtils}
 import net.ceedubs.ficus.Ficus._
+import org.I0Itec.zkclient.ZkClient
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka.{PublicKafkaCluster, _}
 import org.apache.spark.streaming.scheduler._
 import org.apache.spark.streaming.{StreamingContext, StreamingContextState}
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -29,7 +33,8 @@ case class KafkaSource(
   brokers: String,
   topics: Set[String],
   offsetsDir: Option[String] = None,
-  reset: Option[String]
+  zookeeperConfig: Option[ZookeeperConfig] = None,
+  reset: Option[String] = None
 
 ) extends StreamingSource {
 
@@ -39,6 +44,7 @@ case class KafkaSource(
     brokers = config.as[String]("brokers"),
     topics = config.as[Set[String]]("topics"),
     offsetsDir = config.as[Option[String]]("offsetsDir"),
+    zookeeperConfig = config.as[Option[Config]]("zookeeper").map(c => ZookeeperConfig(connect = c.getString("connect"), groupId = c.getString("groupId"))),
     reset = config.as[Option[String]]("reset")
   )
 
@@ -60,19 +66,38 @@ case class KafkaSource(
     })
 
     val leaderPartitions: Map[TopicAndPartition, Long] =
-      kc.getLatestLeaderOffsets(partitions).fold(kafkaErrorHandler(), res=> res).mapValues(o=> o.offset)
+      kc.getLatestLeaderOffsets(partitions).fold(kafkaErrorHandler(), res => res).mapValues(o => o.offset)
 
-    offsetsDir match {
-      case Some(dir) =>
-        val fs = FileSystem.get(URI.create(dir), job.hadoopConfig)
-        job.ssc.addStreamingListener(new KafkaListener(job.ssc, fs, dir))
+    val topicAndPartitions: Option[Map[TopicAndPartition, Long]] = zookeeperConfig.map(zc => {
+      // Zookeeper offset commiter
+      val zkClient = new ZkClient(zc.connect)
+      job.ssc.addStreamingListener(new KafkaZookeeperOffsetCommiterListener(job.ssc, zkClient, zc))
 
-        if (!fs.exists(new Path(dir))) {
-          fs.mkdirs(new Path(dir))
+      topics.flatMap(topic => {
+        val topicDirs = new ZKGroupTopicDirs(zc.groupId, topic)
+        val zkPath = s"${topicDirs.consumerOffsetDir}"
+        if (zkClient.exists(zkPath)) {
+          zkClient.getChildren(zkPath).asScala.map(partitionPath => {
+            val zkPartPath = s"$zkPath/$partitionPath"
+            val offset = zkClient.readData[String](zkPartPath).toLong
+            val partition = partitionPath.split("/").last.toInt
+            TopicAndPartition(topic, partition) -> offset
+          })
+        } else {
+          Seq.empty
         }
+      }).toMap
+    }).orElse(offsetsDir.map(dir => {
+      // Directory offset commiter
+      val fs = FileSystem.get(URI.create(dir), job.hadoopConfig)
+      job.ssc.addStreamingListener(new KafkaDirOffsetCommiterListener(job.ssc, fs, dir))
 
-        def readOffsets(job: StreamingJob, dir: String): Map[TopicAndPartition, Long] = {
-          leaderPartitions ++
+      if (!fs.exists(new Path(dir))) {
+        fs.mkdirs(new Path(dir))
+      }
+
+      def readOffsets(job: StreamingJob, dir: String): Map[TopicAndPartition, Long] = {
+        leaderPartitions ++
           job.listFilesOnly(dir, Seq.empty)
             .map(file => {
               val line = HadoopUtils.readString(file, fs)
@@ -84,29 +109,21 @@ case class KafkaSource(
               it.minBy(_._2)._2
             })
             .filterKeys(tp => topics.contains(tp.topic))
-        }
+      }
+      partitionsFromOffsetOpt.getOrElse(leaderPartitions ++ readOffsets(job, dir))
+    }))
 
-        val ds: InputDStream[(String, String)] = if (reset == Some("smallest")) {
-          KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](
-            job.ssc, kafkaParams, topics)
-        } else {
-          val fromOffset = partitionsFromOffsetOpt.getOrElse(leaderPartitions ++ readOffsets(job, dir))
-          logger.info(s"Started kafka stream from offsets: $fromOffset")
+    val ds: InputDStream[(String, String)] = if (reset == Some("smallest")) {
+      KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](
+        job.ssc, kafkaParams, topics)
+    } else {
+      val fromOffset = leaderPartitions ++ topicAndPartitions.getOrElse(leaderPartitions)
+      logger.info(s"Started kafka stream from offsets: $fromOffset")
 
-          KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder, (String, String)](
-            job.ssc, kafkaParams, fromOffset, messageHandler)
-        }
-        ds.map { case (k, v) => PString(v) }
-      case None =>
-        val ds = partitionsFromOffsetOpt
-          .map(partitionsFromOffset => {
-            KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder, (String, String)](
-              job.ssc, kafkaParams, partitionsFromOffset, messageHandler)
-          })
-          .getOrElse(KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](job.ssc, kafkaParams, topics))
-
-        ds.map { case (k, v) => PString(v) }
+      KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder, (String, String)](
+        job.ssc, kafkaParams, fromOffset, messageHandler)
     }
+    ds.map { case (k, v) => PString(v) }
   }
 
   def kafkaErrorHandler[T](): (ArrayBuffer[Throwable] => T) = errors => {
@@ -119,7 +136,9 @@ case class KafkaSource(
 
 object KafkaSource {
 
-  class KafkaListener(ssc: StreamingContext, fs: FileSystem, offsetsDir: String) extends StreamingListener with LazyLogging {
+  val messageHandler: (MessageAndMetadata[String, String] => (String, String)) = (mmd: MessageAndMetadata[String, String]) => (mmd.key, mmd.message)
+
+  class KafkaDirOffsetCommiterListener(ssc: StreamingContext, fs: FileSystem, offsetsDir: String) extends StreamingListener with LazyLogging {
 
     private[this] var isFailed = false
 
@@ -163,6 +182,49 @@ object KafkaSource {
     }
   }
 
-  val messageHandler: (MessageAndMetadata[String, String] => (String, String)) = (mmd: MessageAndMetadata[String, String]) => (mmd.key, mmd.message)
+  case class ZookeeperConfig(connect: String, groupId: String)
+
+  class KafkaZookeeperOffsetCommiterListener(ssc: StreamingContext, zkClient: ZkClient, zookeeperConfig: ZookeeperConfig) extends StreamingListener with LazyLogging {
+    private[this] var isFailed = false
+    val zkUtils = ZkUtils(zkClient, isZkSecurityEnabled = false)
+
+    override def onBatchCompleted(batchCompleted: StreamingListenerBatchCompleted): Unit = {
+      if (isFailed) {
+        return
+      }
+
+      val bi = batchCompleted.batchInfo
+      val offsets = bi.streamIdToInputInfo.values.flatMap(info => {
+        info.metadata.get("offsets").map(x => {
+          x.asInstanceOf[List[OffsetRange]]
+        }) getOrElse List.empty[OffsetRange]
+      })
+
+      val failures = bi.outputOperationInfos.values.flatMap(info => {
+        info.failureReason
+      })
+
+      if (failures.nonEmpty) {
+        isFailed = true
+        logger.info(s"Batch ${bi.batchTime} completed in ${bi.processingDelay.getOrElse(0)} ms with failure. Offsets: $offsets")
+        Future {
+          if (ssc.getState() != StreamingContextState.STOPPED) {
+            ssc.stop(stopSparkContext = true, stopGracefully = false)
+          }
+        }
+        return
+      }
+
+      logger.info(s"Batch ${bi.batchTime} completed in ${bi.processingDelay.getOrElse(0)} ms processed ${bi.numRecords} records. Offsets: $offsets")
+
+      offsets.foreach(o => {
+        val topicDirs = new ZKGroupTopicDirs(zookeeperConfig.groupId, o.topic)
+        val zkPath = s"${topicDirs.consumerOffsetDir}/${o.partition}"
+
+        zkUtils.updatePersistentPath(zkPath, o.untilOffset.toString)
+      })
+    }
+  }
+
 
 }
