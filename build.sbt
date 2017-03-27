@@ -9,7 +9,7 @@ val clickhouseJdbcVersion = "0.1.14"
 val guavaVersion = "14.0"
 val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.0")
 val javaxServletVersion = "3.0.1"
-val jacksonVersion = "2.4.4"
+val jacksonVersion = "2.8.2"
 val json4SVersion = "3.2.10"
 val ficusVersion = "1.0.1"
 val openCsvVersion = "3.4"
@@ -20,19 +20,20 @@ val scalaTimeVersion = "1.8.+"
 val scoptVersion = "3.3.+"
 val slf4jVersion = "1.7.5"
 val snappyJavaVersion = "1.1.2"
-val sparkVersion = sys.props.getOrElse("sparkVersion", default = "1.6.0")
+val sparkVersion = sys.props.getOrElse("sparkVersion", default = "1.6.0-cdh5.9.1") //1.6.0-cdh5.9.1
 val typesafeConfigVersion = "1.2.+"
 val twitterUtilVersion = "6.27.0"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
-  version := "0.1.6",
+  version := "0.1.7",
   scalaVersion := "2.10.6",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers += Resolver.sonatypeRepo("releases"),
   externalResolvers := Seq(
     "Maven Central Server" at "http://repo1.maven.org/maven2",
-    "Sonatype OSS Releases" at "http://oss.sonatype.org/content/repositories/releases/"
+    "Sonatype OSS Releases" at "http://oss.sonatype.org/content/repositories/releases/",
+    "Cloudera" at "https://repository.cloudera.com/artifactory/cloudera-repos/"
   ),
   publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository"))),
   isSnapshot := true
@@ -90,7 +91,7 @@ val hadoopDependencies = Seq(
 )
 
 lazy val parsek = project.in(file("."))
-  .aggregate(core, spark, sql, streaming, assemblyProject)
+  .aggregate(core, spark, sql, streaming)
 
 lazy val core = project
   .settings(commonSettings: _*)
@@ -113,6 +114,7 @@ lazy val core = project
       "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion,
       "com.fasterxml.jackson.core" % "jackson-annotations" % jacksonVersion,
       "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion,
       "com.opencsv" % "opencsv" % openCsvVersion,
       "com.jsuereth" %% "scala-arm" % scalaArmVersion,
       "com.github.nscala-time" %% "nscala-time" % scalaTimeVersion,
