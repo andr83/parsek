@@ -6,9 +6,10 @@ import com.github.andr83.parsek.spark.sink.Sink
 import com.github.andr83.parsek.spark.streaming.pipe.DStreamPipe
 import com.github.andr83.parsek.spark.streaming.source.StreamingSource
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.slf4j.LazyLogging
 import net.ceedubs.ficus.Ficus._
-import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.streaming.scheduler.{StreamingListener, StreamingListenerBatchStarted}
 
 import scala.collection.mutable.{HashMap => MutableHashMap}
 
@@ -39,16 +40,24 @@ object ParsekStreamingJob extends StreamingJob {
       .groupBy(_.as[Option[String]]("flow") getOrElse DefaultFlow)
       .mapValues(_.map(StreamingSource.apply))
 
+    val oneFlow = if (sourcesByFlow.size == 1) {
+      val pipeContext = repository.getContext(sourcesByFlow.head._1)
+      val inCounter = pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.InputRowsGroup)
+      ssc.addStreamingListener(new CounterListener(inCounter))
+      true
+    } else false
+
     sourcesByFlow foreach {
       case (flow, sources) =>
         val streams = sources.map(_ (this))
         val stream = streams.tail.foldRight(streams.head)(_.union(_))
 
-        val pipeContext = repository.getContext(flow)
-
-        stream foreachRDD (rdd => {
-          pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.InputRowsGroup) += rdd.count()
-        })
+        if (!oneFlow) {
+          val pipeContext = repository.getContext(flow)
+          stream foreachRDD (rdd => {
+            pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.InputRowsGroup) += rdd.count()
+          })
+        }
 
         repository += (flow -> stream)
     }
@@ -63,7 +72,7 @@ object ParsekStreamingJob extends StreamingJob {
     repository.streams filterKeys sinkFlows.contains foreach {
       case (flow, stream) => stream.foreachRDD((rdd, time) => {
         val sinks = sinkConfigs.get(flow).get map Sink.apply
-        val cachedRdd = rdd.persist(StorageLevel.MEMORY_AND_DISK)
+        val cachedRdd = rdd.persist(StorageLevel.MEMORY_ONLY)
 
         val pipeContext = repository.getContext(flow)
         val counter = pipeContext.getCounter(PipeContext.InfoGroup, PipeContext.OutputRowsGroup)
@@ -91,5 +100,11 @@ object ParsekStreamingJob extends StreamingJob {
     val pipe = DStreamPipe(pipeConfig)
     val flow = pipeConfig.as[Option[String]]("flow") getOrElse DefaultFlow
     pipe.run(flow, repository)
+  }
+
+  class CounterListener(inCounter: com.github.andr83.parsek.LongCounter) extends StreamingListener with LazyLogging {
+    override def onBatchStarted(batchStarted: StreamingListenerBatchStarted): Unit = {
+      inCounter += batchStarted.batchInfo.numRecords
+    }
   }
 }
