@@ -43,12 +43,17 @@ object RDDUtils extends LazyLogging {
         })
     }
 
-    val num = numPartitions getOrElse {
-      val num = rddWithKey.keys.distinct().count().toInt
-      logger.warn(s"Autodetect $num partitions. Use numPartitions option for better performance.")
-      num
+    val p = numPartitions.map(new HashPartitioner(_)).getOrElse {
+      val keys = rddWithKey.keys.distinct().collect().toList
+      logger.warn(s"Autodetect ${keys.size} partitions. Use numPartitions option for better performance.")
+      new org.apache.spark.Partitioner {
+        override def numPartitions: Int = keys.size
+
+        override def getPartition(key: Any): Int = keys.indexOf(key.toString)
+      }
     }
-    rddWithKey partitionBy new HashPartitioner(num)
+
+    rddWithKey partitionBy p
   }
 
   trait RDDPartitioner {
