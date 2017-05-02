@@ -19,12 +19,16 @@ abstract class StreamingJob extends SparkJob {
       conf.set("spark.streaming.receiver.maxRate", rate.toString)
       conf.set("spark.streaming.kafka.maxRatePerPartition", rate.toString)
     })
+    minRate foreach (rate=> {
+      conf.set("spark.streaming.backpressure.pid.minRate", rate.toString)
+    })
     conf
   }
 
   var batchDuration = Seconds(1)
   var checkpointDirectory: Option[String] = None
   var maxRate: Option[Int] = None
+  var minRate: Option[Int] = None
 
 
   opt[String]("batchDuration") foreach {
@@ -38,6 +42,10 @@ abstract class StreamingJob extends SparkJob {
   opt[Int]("maxRate") foreach {
     rate => maxRate = Some(rate)
   } text "Maximum receiver rate limit in terms of records / sec."
+
+  opt[Int]("minRate") foreach {
+    rate => minRate = Some(rate)
+  } text "Minimum receiver rate limit in terms of records / sec."
 
   def createContext(): StreamingContext = {
     ssc = new StreamingContext(sparkConfig, batchDuration)
