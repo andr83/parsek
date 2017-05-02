@@ -8,10 +8,10 @@ import com.github.andr83.parsek.meta._
 import com.github.andr83.parsek.serde.JsonSerDe
 import com.typesafe.config.{Config, ConfigException}
 import net.ceedubs.ficus.Ficus._
-import net.ceedubs.ficus.readers.ArbitraryTypeReader._
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{Row, SQLContext}
 
 import scala.collection.JavaConversions._
 
@@ -41,7 +41,8 @@ case class HiveSink(
   val schema = createSchema(fields)
 
   override def sink(rdd: RDD[PValue], time: Long): Unit = {
-    val sqlContext = new org.apache.spark.sql.hive.HiveContext(rdd.context)
+    //val sqlContext = new org.apache.spark.sql.hive.HiveContext(rdd.context)
+    implicit val sc = rdd.context
 
     val root = RecordField("root", fields)
     val rowRdd = rdd.map(createRow(_, root))
@@ -53,10 +54,21 @@ case class HiveSink(
       logger.debug(s"Executing query: $queryWithFields")
       sqlContext.sql(queryWithFields)
     })
+
+    sqlContext.dropTempTable("sink_table")
   }
 }
 
 object HiveSink {
+
+  @volatile
+  private[HiveSink] var _sqlContext: SQLContext = _
+  def sqlContext(implicit sc: SparkContext): SQLContext = this.synchronized {
+    if (_sqlContext == null) {
+      _sqlContext = new org.apache.spark.sql.hive.HiveContext(sc)
+    }
+    _sqlContext
+  }
 
   private def jsonSerDe = JsonSerDe.default
 
