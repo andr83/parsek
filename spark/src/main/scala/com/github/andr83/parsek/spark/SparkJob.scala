@@ -11,7 +11,7 @@ import net.ceedubs.ficus.Ficus._
 import org.apache.commons.io.IOUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.log4j.{Level, Logger}
+import org.apache.log4j.{Level, Logger, PropertyConfigurator}
 import org.apache.spark.{SparkConf, SparkContext}
 import resource._
 import scopt.{OptionDef, Read}
@@ -47,6 +47,13 @@ abstract class SparkJob extends LazyLogging {
       .set("spark.driver.allowMultipleContexts", "true")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     sparkCores foreach (cores=> sc.set("spark.cores.max", cores.toString))
+    sparkMetrics foreach (path=> sc.set("spark.metrics.conf", path))
+    sparkMetricsNamespace foreach (namespace=> {
+      sc.set("spark.metrics.namespace", namespace)
+      sc.set(namespace, namespace)
+    })
+
+    sparkParams foreach {case (k,v) => sc.set(k, v)}
     sc
   }
 
@@ -81,9 +88,12 @@ abstract class SparkJob extends LazyLogging {
   var sparkCores: Option[Int] = None
   var sparkMaster = "local[*]"
   var sparkLogLevel = Level.WARN
+  var sparkMetrics: Option[String] = None
+  var sparkMetricsNamespace: Option[String] = None
   var hadoopUser: Option[String] = None
   var hadoopConfigDirectory = ""
   var params = Map.empty[String, String]
+  var sparkParams = Map.empty[String, String]
 
   @volatile private var _config = ConfigFactory.empty()
   def config = _config
@@ -108,6 +118,14 @@ abstract class SparkJob extends LazyLogging {
     sparkLogLevel = Level.toLevel(value)
   } text "Spark logger output level. Default WARN"
 
+  opt[String]("sparkMetrics") foreach { value =>
+    sparkMetrics = Some(value)
+  } text "Path to spark.metrics.conf file"
+
+  opt[String]("sparkMetricsNamespace") foreach { value =>
+    sparkMetricsNamespace = Some(value)
+  } text "Path to spark.metrics.conf file"
+
   opt[String]("hadoopUser") foreach {user=>
     hadoopUser = Some(user)
     System.setProperty("HADOOP_USER_NAME", user)
@@ -116,6 +134,10 @@ abstract class SparkJob extends LazyLogging {
   opt[String]("hadoopConfigDirectory") foreach {
     hadoopConfigDirectory = _
   } text "Path to hadoop config directory with core-site.xml and hdfs-site.xml files"
+
+  opt[String]("log4jConfiguration") foreach {l4jc=>
+    PropertyConfigurator.configure(l4jc)
+  }
 
   opt[String]('c', "config") required() foreach { path =>
     _config = if (path.startsWith("hdfs://")) {
@@ -133,6 +155,10 @@ abstract class SparkJob extends LazyLogging {
   opt[Map[String, String]]("params") foreach {
     params = _
   } text "Configuration file params in format param1=val1,param2=val2"
+
+  opt[Map[String, String]]("sparkConf") foreach {
+    sparkParams = _
+  } text "Spark configuration params in format param1=val1,param2=val2"
 
   /**
     * List recursively all files from path
