@@ -31,10 +31,12 @@ import scala.util.Try
   */
 case class KafkaSource(
   brokers: String,
+  groupId: String,
   topics: Set[String],
   offsetsDir: Option[String] = None,
   zookeeperConfig: Option[ZookeeperConfig] = None,
   reset: Option[String] = None
+
 
 ) extends StreamingSource {
 
@@ -42,6 +44,7 @@ case class KafkaSource(
 
   def this(config: Config) = this(
     brokers = config.as[String]("brokers"),
+    groupId = config.as[String]("groupId"),
     topics = config.as[Set[String]]("topics"),
     offsetsDir = config.as[Option[String]]("offsetsDir"),
     zookeeperConfig = config.as[Option[Config]]("zookeeper").map(c => ZookeeperConfig(connect = c.getString("connect"), groupId = c.getString("groupId"))),
@@ -49,8 +52,10 @@ case class KafkaSource(
   )
 
   def apply(job: StreamingJob): DStream[PValue] = {
-    val kafkaParams = Map[String, String]("metadata.broker.list" -> brokers) ++
-      reset.filter(Seq("smallest", "largest").contains).map(v => Map("auto.offset.reset" -> v)).getOrElse(Map.empty[String, String])
+    val kafkaParams = Map[String, String](
+      "metadata.broker.list" -> brokers,
+      "group.id" -> groupId
+    ) ++ reset.filter(Seq("smallest", "largest").contains).map(v => Map("auto.offset.reset" -> v)).getOrElse(Map.empty[String, String])
 
     val kc = new PublicKafkaCluster(kafkaParams)
     val partitions = kc.getPartitions(topics).fold(
@@ -68,7 +73,43 @@ case class KafkaSource(
     val leaderPartitions: Map[TopicAndPartition, Long] =
       kc.getLatestLeaderOffsets(partitions).fold(kafkaErrorHandler(), res => res).mapValues(o => o.offset)
 
-    val topicAndPartitions: Option[Map[TopicAndPartition, Long]] = zookeeperConfig.map(zc => {
+    val earliestPartitions: Map[TopicAndPartition, Long] =
+      kc.getEarliestLeaderOffsets(partitions).fold(kafkaErrorHandler(), res => res).mapValues(o => o.offset)
+
+    val topicAndPartitions: Option[Map[TopicAndPartition, Long]] = offsetsDir.map(dir => {
+      // Directory offset commiter
+      val fs = FileSystem.get(URI.create(dir), job.hadoopConfig)
+      job.ssc.addStreamingListener(new KafkaDirOffsetCommiterListener(job.ssc, fs, dir))
+
+      zookeeperConfig.foreach(zc=> {
+        // Zookeeper offset commiter
+        val zkClient = new ZkClient(zc.connect)
+        job.ssc.addStreamingListener(new KafkaZookeeperOffsetCommiterListener(job.ssc, zkClient, zc))
+      })
+
+      if (!fs.exists(new Path(dir))) {
+        fs.mkdirs(new Path(dir))
+      }
+
+      def readOffsets(job: StreamingJob, dir: String): Map[TopicAndPartition, Long] = {
+        leaderPartitions ++
+          job.listFilesOnly(dir, Seq.empty)
+            .map(file => {
+              val line = HadoopUtils.readString(file, fs)
+              val Array(topic: String, partition: String, offset: String) = line.split(",")
+              val tp = TopicAndPartition(topic, partition.toInt)
+              val earliestOffset = earliestPartitions.getOrElse(tp, 0L)
+
+              tp -> (if (offset.toLong >= earliestOffset) offset.toLong else earliestOffset)
+            })
+            .groupBy(_._1)
+            .mapValues(it => {
+              it.minBy(_._2)._2
+            })
+            .filterKeys(tp => topics.contains(tp.topic))
+      }
+      partitionsFromOffsetOpt.getOrElse(leaderPartitions ++ readOffsets(job, dir))
+    }).orElse(zookeeperConfig.map(zc => {
       // Zookeeper offset commiter
       val zkClient = new ZkClient(zc.connect)
       job.ssc.addStreamingListener(new KafkaZookeeperOffsetCommiterListener(job.ssc, zkClient, zc))
@@ -81,36 +122,15 @@ case class KafkaSource(
             val zkPartPath = s"$zkPath/$partitionPath"
             val offset = zkClient.readData[String](zkPartPath).toLong
             val partition = partitionPath.split("/").last.toInt
-            TopicAndPartition(topic, partition) -> offset
+            val tp = TopicAndPartition(topic, partition)
+            val earliestOffset = earliestPartitions.getOrElse(tp, 0L)
+
+            tp -> (if (offset >= earliestOffset) offset else earliestOffset)
           })
         } else {
           Seq.empty
         }
       }).toMap
-    }).orElse(offsetsDir.map(dir => {
-      // Directory offset commiter
-      val fs = FileSystem.get(URI.create(dir), job.hadoopConfig)
-      job.ssc.addStreamingListener(new KafkaDirOffsetCommiterListener(job.ssc, fs, dir))
-
-      if (!fs.exists(new Path(dir))) {
-        fs.mkdirs(new Path(dir))
-      }
-
-      def readOffsets(job: StreamingJob, dir: String): Map[TopicAndPartition, Long] = {
-        leaderPartitions ++
-          job.listFilesOnly(dir, Seq.empty)
-            .map(file => {
-              val line = HadoopUtils.readString(file, fs)
-              val Array(topic: String, partition: String, offset: String) = line.split(",")
-              TopicAndPartition(topic, partition.toInt) -> offset.toLong
-            })
-            .groupBy(_._1)
-            .mapValues(it => {
-              it.minBy(_._2)._2
-            })
-            .filterKeys(tp => topics.contains(tp.topic))
-      }
-      partitionsFromOffsetOpt.getOrElse(leaderPartitions ++ readOffsets(job, dir))
     }))
 
     val ds: InputDStream[(String, String)] = if (reset == Some("smallest")) {
