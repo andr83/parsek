@@ -140,7 +140,8 @@ lazy val spark = project
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % scoptVersion,
       "org.apache.spark" %% "spark-core" % sparkVersion
-        excludeAll (sparkExclusions: _*)
+        excludeAll (sparkExclusions: _*),
+      "org.apache.httpcomponents" % "httpclient" % "4.5.2"
     ) ++ hadoopDependencies
   )
   .dependsOn(core)
@@ -219,7 +220,8 @@ lazy val assemblyClusterProject = project
     libraryDependencies ++= Seq(
       "com.google.guava" % "guava" % "19.0",
       "org.apache.httpcomponents" % "httpcore" % commonsHttpCore,
-      "org.apache.httpcomponents" % "httpclient" % commonsHttpClient
+      "org.apache.httpcomponents" % "httpclient" % commonsHttpClient,
+      "org.apache.httpcomponents" % "httpclient" % "4.5.2"
     ),
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false),
     assemblyJarName in assembly := s"parsek-cluster-${version.value}.jar",
@@ -227,6 +229,7 @@ lazy val assemblyClusterProject = project
       ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion),
       ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpcore" % commonsHttpCore),
       ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inLibrary("org.apache.httpcomponents" % "httpclient" % commonsHttpClient),
+      ShadeRule.rename("org.apache.http.**" -> "shade.org.apache.http.@1").inProject,
       ShadeRule.rename("com.google.**" -> "shade.com.google.@1").inLibrary("ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion),
       ShadeRule.rename("com.google.**" -> "shade.com.google.@1").inLibrary("com.google.guava" % "guava" % "19.0")
     )

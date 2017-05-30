@@ -95,7 +95,7 @@ abstract class SparkJob extends LazyLogging {
   var params = Map.empty[String, String]
   var sparkParams = Map.empty[String, String]
 
-  @volatile private var _config = ConfigFactory.empty()
+  @volatile private var _config = ConfigFactory.load()
   def config = _config
 
   opt[String]("appName") foreach {
@@ -140,15 +140,20 @@ abstract class SparkJob extends LazyLogging {
   }
 
   opt[String]('c', "config") required() foreach { path =>
-    _config = if (path.startsWith("hdfs://")) {
-      (for (
-        in <- managed(fs.open(path))
-      ) yield IOUtils.toString(in)).either match {
-        case Right(content) => ConfigFactory.parseString(content)
-        case Left(errors) => throw errors.head
+    _config = {
+      val c = {
+        if (path.startsWith("hdfs://")) {
+          (for (
+            in <- managed(fs.open(path))
+          ) yield IOUtils.toString(in)).either match {
+            case Right(content) => ConfigFactory.parseString(content)
+            case Left(errors) => throw errors.head
+          }
+        } else {
+          ConfigFactory.parseFile(path)
+        }
       }
-    } else {
-      ConfigFactory.parseFile(path)
+      c.withFallback(_config).resolve()
     }
   } text "Configuration file path. Support local and hdfs"
 
