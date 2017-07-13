@@ -5,7 +5,7 @@ val commonsCodecVersion = "1.1"
 val commonsLangVersion = "2.6"
 val commonsHttpCore =  "4.4.4"
 val commonsHttpClient =  "4.5.2"
-val clickhouseJdbcVersion = "0.1.14"
+val clickhouseJdbcVersion = "0.1.25"
 val guavaVersion = "14.0"
 val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.0")
 val javaxServletVersion = "3.0.1"

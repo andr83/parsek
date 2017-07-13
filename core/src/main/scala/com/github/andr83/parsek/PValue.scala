@@ -42,7 +42,9 @@ object PDate {
 final case class PMap(value: Map[String, PValue]) extends PValue {
   type valueType = Map[String, PValue]
 
-  def getValue(path: String): Option[PValue] = getValue(path.split('.'))
+  def getValue(path: String): Option[PValue] =
+    Seq(path.split("(?<!\\\\)\\."), Array(path), Array(path.replace(".", "\\.")))
+      .view.map(f => getValue(f)).find(_.isDefined).flatten
 
   def getValue(path: Seq[String]): Option[PValue] = {
     val head = path.head

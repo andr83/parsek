@@ -41,11 +41,11 @@ case class ClickhouseSink(
 
   override def sink(rdd: RDD[PValue], time: Long): Unit = {
     implicit val dsFactory = () => new ClickHouseDataSource(jdbcUrl, new Properties())
-    rdd.foreachPartition(it=> {
+    rdd.foreachPartition(it => {
       if (it.nonEmpty) {
         withConnection(conn => {
           val tableSchema: RecordField = withConnection(conn => clickhouseTableDescription(conn, tableName))
-          val fieldsToSave = tableSchema.fields.filter(f => fields.contains(f.asField))
+          val fieldsToSave = tableSchema.fields.filter(f => fields.contains(f.asField.replace(".", "\\.")))
 
           val queryStart = s"INSERT INTO $tableName (${fieldsToSave.map(_.name).mkString(",")}) VALUES "
           val query = new mutable.StringBuilder(queryStart)
@@ -53,10 +53,10 @@ case class ClickhouseSink(
 
           query.append(prefix)
           prefix = ","
-          val rowValues = it.map(r => r match {
+          val rowValues = it.map {
             case v: PMap => strValues(v, fieldsToSave) mkString("(", ",", ")")
             case x => throw new IllegalStateException(s"Expected PMap value but got $x")
-          }).toList
+          }.toList
           query.append(rowValues.mkString(","))
           logger.info(rowValues.head)
           logger.info(s"Storing ${rowValues.size} rows.")
@@ -89,6 +89,8 @@ object ClickhouseSink {
     }
   }
 
+  private val arrayTypeRegexp = "Array\\((\\w+)\\)".r
+
   def clickhouseTableDescription(connection: Connection, tableName: String): RecordField =
     RecordField(name="root", fields= {
       val fields = new Iterator[FieldType] {
@@ -105,9 +107,8 @@ object ClickhouseSink {
 
         override def hasNext: Boolean = columns.next()
 
-        override def next(): FieldType = {
-          val name = columns.getString(1)
-          TypeUtils.toSqlType(columns.getString(2)) match {
+        def sqlTypeToParseField(name: String, sqlType: String): FieldType = {
+          TypeUtils.toSqlType(sqlType) match {
             case Types.BIGINT => LongField(name)
             case Types.INTEGER => IntField(name)
             case Types.VARCHAR => StringField(name)
@@ -115,27 +116,32 @@ object ClickhouseSink {
             case Types.DOUBLE => DoubleField(name)
             case Types.DATE => DateField(name, pattern = DateFormatter(Some("yyyy-MM-dd")))
             case Types.TIMESTAMP => DateField(name, pattern = DateFormatter(Some("yyyy-MM-dd HH:mm:ss")))
+            case Types.ARRAY => {
+              val innerType = sqlType match {
+                case arrayTypeRegexp(innerTypeStr) => sqlTypeToParseField(name, innerTypeStr)
+              }
+              ListField(name, Some(innerType))
+            }
             case x => throw new IllegalStateException(s"Unsupported type $x on field $name")
           }
+        }
+
+        override def next(): FieldType = {
+          val name = columns.getString(1)
+          val sqlType = columns.getString(2)
+          sqlTypeToParseField(name, sqlType)
         }
       }.toList
       fields
     })
 
-  def strValues(row: PMap, fields: Seq[FieldType]): Seq[String] = fields.map(f=> {
-    row.getValue(f.asField) match {
-      case Some(v) => stringify(v, f)
-      case None => f match {
-        case f: IntField => "0"
-        case f: LongField => "0"
-        case f: DoubleField => "0"
-        case f: BooleanField => "0"
-        case _ => "'NULL'"
-      }
-    }
+  def strValues(row: PMap, fields: Seq[FieldType]): Seq[String] = fields.map(f => {
+    row.getValue(f.asField).map(stringify(_, f)).getOrElse("NULL")
   })
 
   def quote(str: String) = "'" + ClickHouseUtil.escape(str) + "'"
+
+  private val defaultField = StringField("")
 
   def stringify(value: PValue, field: FieldType): String = field match {
     case f: BooleanField =>
@@ -158,7 +164,7 @@ object ClickhouseSink {
       }
     case f: ListField =>
       value match {
-        case PList(list) => "[" + list.map(v=> quote(stringSerializer.write(v).asStr)).mkString(",") + "]"
+        case PList(list) => "[" + list.map(v => stringify(v, f.field.getOrElse(defaultField))).mkString(",") + "]"
         case x => throw new IllegalStateException(s"Expected List value for field ${field.asField} got $x")
       }
     case f: IntField => numberStringify(value)

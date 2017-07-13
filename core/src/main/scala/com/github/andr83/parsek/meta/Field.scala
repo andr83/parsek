@@ -36,8 +36,11 @@ trait ValidationError extends RuntimeException {
 }
 
 case class RequiredFieldError(field: FieldType, cause: Throwable) extends RuntimeException
+
 case class IllegalValueType(msg: String) extends ValidationError
+
 case class FieldIsEmpty(msg: String) extends ValidationError
+
 case class PatternNotMatched(msg: String) extends ValidationError
 
 
@@ -170,7 +173,7 @@ case class MapField(
 ) extends Field[PMap] {
   override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PMap] = value match {
     case PMap(map) =>
-      val res = field map (f => map.flatMap{case (k,v) => f.validate(v, partial).map(k->_)}) getOrElse map
+      val res = field map (f => map.flatMap { case (k, v) => f.validate(v, partial).map(k -> _) }) getOrElse map
       if (res.isEmpty) None else Some(res)
     case _ => throw IllegalValueType(s"Field $name expect map value type but got $value")
   }
@@ -183,10 +186,7 @@ case class ListField(
   override def validate(value: PValue, partial: Boolean = false)(implicit context: PipeContext): Option[PList] = value match {
     case PList(list) =>
       val res = field map (f => list.flatMap(v => f.validate(v))) getOrElse list
-      if (res.isEmpty) None else as match {
-        case Some(asField) => Some(PList(res.map(v=>PMap(Map(asField->v)))))
-        case None => Some(PList(res))
-      }
+      Some(PList(res))
     case _ => throw IllegalValueType(s"Field $name expect list value type but got $value")
   }
 }
