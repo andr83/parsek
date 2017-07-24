@@ -79,7 +79,7 @@ object ClickhouseSink {
     case x => throw new IllegalStateException(s"Expected number value got $x")
   }
 
-  def withConnection[A](block: Connection => A)(implicit dsFactory: ()=> ClickHouseDataSource): A = {
+  def withConnection[A](block: Connection => A)(implicit dsFactory: () => ClickHouseDataSource): A = {
     Class.forName("ru.yandex.clickhouse.ClickHouseDriver")
     val conn = dsFactory().getConnection
     try {
@@ -92,7 +92,7 @@ object ClickhouseSink {
   private val arrayTypeRegexp = "Array\\((\\w+)\\)".r
 
   def clickhouseTableDescription(connection: Connection, tableName: String): RecordField =
-    RecordField(name="root", fields= {
+    RecordField(name = "root", fields = {
       val fields = new Iterator[FieldType] {
         val (db, table) = if (tableName.contains(".")) {
           val of: Int = tableName.indexOf(".")
@@ -103,7 +103,7 @@ object ClickhouseSink {
             s"from system.columns " +
             s"where " +
             s"  concat(database,'.',table) = '$tableName' " +
-            s"  and default_type <> 'MATERIALIZED'")
+            s"  and default_kind <> 'MATERIALIZED'")
 
         override def hasNext: Boolean = columns.next()
 
@@ -136,7 +136,15 @@ object ClickhouseSink {
     })
 
   def strValues(row: PMap, fields: Seq[FieldType]): Seq[String] = fields.map(f => {
-    row.getValue(f.asField).map(stringify(_, f)).getOrElse("NULL")
+    row.getValue(f.asField).map(stringify(_, f)).getOrElse {
+      f match {
+        case _: IntField => "0"
+        case _: LongField => "0"
+        case _: DoubleField => "0"
+        case _: BooleanField => "0"
+        case _ => "'NULL'"
+      }
+    }
   })
 
   def quote(str: String) = "'" + ClickHouseUtil.escape(str) + "'"
@@ -159,7 +167,7 @@ object ClickhouseSink {
       }
     case f: RecordField =>
       value match {
-        case m:PMap => "[" + strValues(m, f.fields).mkString(",") + "]"
+        case m: PMap => "[" + strValues(m, f.fields).mkString(",") + "]"
         case x => throw new IllegalStateException(s"Expected Record value for field ${field.asField} got $x")
       }
     case f: ListField =>
