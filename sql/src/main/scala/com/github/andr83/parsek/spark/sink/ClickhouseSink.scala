@@ -1,7 +1,7 @@
 package com.github.andr83.parsek.spark.sink
 
 import java.sql.{Connection, ResultSet, Types}
-import java.util
+import java.util.{ArrayList => JAList}
 import java.util.Properties
 
 import com.github.andr83.parsek._
@@ -34,7 +34,7 @@ case class ClickhouseSink(
     tableName = config.as[String]("tableName"),
     fields = config.getAnyRef("fields") match {
       case q: String => Seq(q)
-      case qs: util.ArrayList[String] => qs.toSeq
+      case qs: JAList[String] @unchecked => qs.toSeq
       case _ => throw new ConfigException.BadValue("fields", "Fields must be a string or list of strings")
     }
   )

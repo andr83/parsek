@@ -8,12 +8,15 @@ val commonsHttpClient =  "4.5.2"
 val clickhouseJdbcVersion = "0.1.25"
 val guavaVersion = "14.0"
 val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.0")
+val hikariVersion = "2.5.1"
 val javaxServletVersion = "3.0.1"
 val jacksonVersion = "2.8.2"
 val json4SVersion = "3.2.10"
 val ficusVersion = "1.0.1"
 val openCsvVersion = "3.4"
+val phoenixVersion = "4.9.0-cdh5.9.1"
 val scalaArmVersion = "1.4"
+val scalaConfigVersion = "0.3"
 val scalaLoggingVersion = "2.1.2"
 val scalaTestVersion = "2.2.+"
 val scalaTimeVersion = "1.8.+"
@@ -108,6 +111,8 @@ lazy val core = project
       "org.slf4j" % "slf4j-simple" % slf4jVersion % "test",
       "com.typesafe" % "config" % typesafeConfigVersion,
       "com.typesafe.scala-logging" %% "scala-logging-slf4j" % scalaLoggingVersion,
+      "com.zaxxer" % "HikariCP" % hikariVersion,
+      "org.apache.phoenix" % "phoenix-client" % phoenixVersion,
       "org.json4s" %% "json4s-native" % json4SVersion,
       "org.json4s" %% "json4s-jackson" % json4SVersion
         excludeAll(jacksonExclusion: _*),
@@ -118,6 +123,7 @@ lazy val core = project
       "com.opencsv" % "opencsv" % openCsvVersion,
       "com.jsuereth" %% "scala-arm" % scalaArmVersion,
       "com.github.nscala-time" %% "nscala-time" % scalaTimeVersion,
+      "com.github.andr83" %% "scalaconfig" % scalaConfigVersion,
       "javax.servlet" % "javax.servlet-api" % javaxServletVersion,
       "org.xerial.snappy" % "snappy-java" % snappyJavaVersion,
 //      "net.ceedubs" %% "ficus" % ficusVersion,

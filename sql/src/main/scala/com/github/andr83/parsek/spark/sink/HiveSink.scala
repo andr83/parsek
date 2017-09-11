@@ -1,7 +1,7 @@
 package com.github.andr83.parsek.spark.sink
 
 import java.sql.Timestamp
-import java.util
+import java.util.{ArrayList => JAList}
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.meta._
@@ -32,7 +32,7 @@ case class HiveSink(
   def this(config: Config) = this(
     queries = config.getAnyRef("query") match {
       case q: String => Seq(q)
-      case qs: util.ArrayList[_] => qs.map(_.toString).toSeq
+      case qs: JAList[String] @unchecked => qs.toSeq
       case _ => throw new ConfigException.BadValue("query", "Query must be a string or list of strings")
     },
     fields = config.as[List[Config]]("fields") map Field.apply
