@@ -2,13 +2,11 @@ package com.github.andr83.parsek.spark.sink
 
 import java.sql.Connection
 import java.sql.Types._
-import java.util.Properties
-import java.util.{ArrayList => JAList}
+import java.util.{Properties, ArrayList => JAList}
 
 import com.github.andr83.parsek._
-import com.github.andr83.scalaconfig._
 import com.typesafe.config.{Config, ConfigException}
-import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
+import net.ceedubs.ficus.Ficus._
 import org.apache.spark.rdd.RDD
 
 import scala.collection.JavaConversions._
@@ -26,7 +24,11 @@ case class HbaseSink(
   def this(config: Config) = this(
     config.as[String]("tableName"),
     config.as[String]("phoenix.connectionUrl"),
-    config.as[Option[Properties]]("phoenix"),
+    config.as[Option[Map[String, String]]]("phoenix").map(m => {
+      val p = new Properties()
+      p.putAll(m)
+      p
+    }),
     config.getAnyRef("fields") match {
       case q: String => Seq(q)
       case qs: JAList[String] @unchecked => qs.toSeq

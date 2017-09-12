@@ -14,7 +14,7 @@ val jacksonVersion = "2.8.2"
 val json4SVersion = "3.2.10"
 val ficusVersion = "1.0.1"
 val openCsvVersion = "3.4"
-val phoenixVersion = sys.props.getOrElse("hbaseVersion", default = "4.9.0-HBase-1.1") //"4.9.0-cdh5.9.1"
+val phoenixVersion = sys.props.getOrElse("phoenixVersion", default = "4.9.0-HBase-1.1") //"4.9.0-cdh5.9.1"
 val scalaArmVersion = "1.4"
 val scalaConfigVersion = "0.3"
 val scalaLoggingVersion = "2.1.2"
@@ -29,7 +29,7 @@ val twitterUtilVersion = "6.27.0"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
-  version := "0.1.9",
+  version := "0.1.10",
   scalaVersion := "2.10.6",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers += Resolver.sonatypeRepo("releases"),
@@ -111,8 +111,6 @@ lazy val core = project
       "org.slf4j" % "slf4j-simple" % slf4jVersion % "test",
       "com.typesafe" % "config" % typesafeConfigVersion,
       "com.typesafe.scala-logging" %% "scala-logging-slf4j" % scalaLoggingVersion,
-      "com.zaxxer" % "HikariCP" % hikariVersion,
-      "org.apache.phoenix" % "phoenix-client" % phoenixVersion,
       "org.json4s" %% "json4s-native" % json4SVersion,
       "org.json4s" %% "json4s-jackson" % json4SVersion
         excludeAll(jacksonExclusion: _*),
@@ -123,7 +121,6 @@ lazy val core = project
       "com.opencsv" % "opencsv" % openCsvVersion,
       "com.jsuereth" %% "scala-arm" % scalaArmVersion,
       "com.github.nscala-time" %% "nscala-time" % scalaTimeVersion,
-      "com.github.andr83" %% "scalaconfig" % scalaConfigVersion,
       "javax.servlet" % "javax.servlet-api" % javaxServletVersion,
       "org.xerial.snappy" % "snappy-java" % snappyJavaVersion,
 //      "net.ceedubs" %% "ficus" % ficusVersion,
@@ -161,7 +158,9 @@ lazy val sql = project
       "org.apache.spark" %% "spark-sql" % sparkVersion
         excludeAll (sparkExclusions: _*),
       "org.apache.spark" %% "spark-hive" % sparkVersion,
-      "ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion
+      "ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion,
+      "com.zaxxer" % "HikariCP" % hikariVersion,
+      "org.apache.phoenix" % "phoenix-client" % phoenixVersion % "provided"
     )
   )
   .dependsOn(spark)

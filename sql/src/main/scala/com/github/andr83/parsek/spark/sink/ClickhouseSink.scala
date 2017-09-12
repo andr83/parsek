@@ -1,8 +1,7 @@
 package com.github.andr83.parsek.spark.sink
 
 import java.sql.{Connection, ResultSet, Types}
-import java.util.{ArrayList => JAList}
-import java.util.Properties
+import java.util.{Properties, ArrayList => JAList}
 
 import com.github.andr83.parsek._
 import com.github.andr83.parsek.formatter.DateFormatter
