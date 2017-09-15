@@ -79,8 +79,8 @@ case class HbaseSink(
 
           for (data <- datas.map(_.toMap)) {
             for (((columnName, sqlType), _i) <- columnsNameType.zipWithIndex; i = _i + 1) {
-              val value = data.get(columnName).flatten
-              value match { // todo extract & TESTS
+              val value = data.get(columnName.toLowerCase).flatten
+              value match {
                 case None =>
                   pstmt.setNull(i, sqlType)
 
@@ -96,6 +96,9 @@ case class HbaseSink(
                 case Some(PBool(v)) if sqlType == BIT =>
                   pstmt.setBoolean(i, v)
 
+                case Some(PBool(v)) if sqlType == TINYINT =>
+                  pstmt.setByte(i, if (v) 1 else 0)
+
                 case Some(PDate(v)) if sqlType == DATE =>
                   pstmt.setDate(i, java.sql.Date.valueOf(v.toLocalDate.toString))
 
@@ -104,6 +107,9 @@ case class HbaseSink(
 
                 case Some(PDate(v)) if sqlType == TIMESTAMP =>
                   pstmt.setTimestamp(i, new java.sql.Timestamp(v.toLocalDate.toDateTimeAtStartOfDay.getMillis))
+
+                case Some(PLong(v)) if sqlType == TIMESTAMP =>
+                  pstmt.setTimestamp(i, new java.sql.Timestamp(v))
 
                 case Some(PString(v)) if sqlType == DATE =>
                   pstmt.setDate(i, java.sql.Date.valueOf(v))
