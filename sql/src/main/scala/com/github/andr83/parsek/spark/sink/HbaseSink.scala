@@ -6,6 +6,7 @@ import java.util.{Properties, ArrayList => JAList}
 
 import com.github.andr83.parsek._
 import com.typesafe.config.{Config, ConfigException}
+import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import net.ceedubs.ficus.Ficus._
 import org.apache.spark.rdd.RDD
 
