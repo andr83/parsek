@@ -7,14 +7,14 @@ val commonsHttpCore =  "4.4.4"
 val commonsHttpClient =  "4.5.2"
 val clickhouseJdbcVersion = "0.1.25"
 val guavaVersion = "14.0"
-val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.0-cdh5.12.0")
+val hadoopVersion = sys.props.getOrElse("hadoopVersion", default = "2.6.0-cdh5.9.1")
 val hikariVersion = "2.5.1"
 val javaxServletVersion = "3.0.1"
 val jacksonVersion = "2.8.2"
 val json4SVersion = "3.2.10"
 val ficusVersion = "1.0.1"
 val openCsvVersion = "3.4"
-val phoenixVersion = sys.props.getOrElse("phoenixVersion", default = "4.9.0-HBase-1.1") //"4.9.0-cdh5.9.1"
+val phoenixVersion = sys.props.getOrElse("phoenixVersion", default = "4.9.0-cdh5.9.1") //"4.9.0-cdh5.9.1"
 val scalaArmVersion = "1.4"
 val scalaConfigVersion = "0.3"
 val scalaLoggingVersion = "2.1.2"
@@ -23,7 +23,7 @@ val scalaTimeVersion = "1.8.+"
 val scoptVersion = "3.3.+"
 val slf4jVersion = "1.7.5"
 val snappyJavaVersion = "1.1.2"
-val sparkVersion = sys.props.getOrElse("sparkVersion", default = "1.6.0-cdh5.12.0") //1.6.0-cdh5.9.1
+val sparkVersion = sys.props.getOrElse("sparkVersion", default = "1.6.0-cdh5.9.1") //1.6.0-cdh5.9.1
 val typesafeConfigVersion = "1.2.+"
 val twitterUtilVersion = "6.27.0"
 
@@ -160,7 +160,7 @@ lazy val sql = project
       "org.apache.spark" %% "spark-hive" % sparkVersion,
       "ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion,
       "com.zaxxer" % "HikariCP" % hikariVersion,
-      "org.apache.phoenix" % "phoenix-client" % phoenixVersion % "provided"
+      "org.apache.phoenix" % "phoenix-client" % phoenixVersion //% "provided"
     )
   )
   .dependsOn(spark)
