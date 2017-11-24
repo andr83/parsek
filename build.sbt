@@ -14,6 +14,7 @@ val jacksonVersion = "2.8.2"
 val json4SVersion = "3.2.10"
 val ficusVersion = "1.0.1"
 val openCsvVersion = "3.4"
+val okHttpVersion = "3.9.1"
 val phoenixVersion = sys.props.getOrElse("phoenixVersion", default = "4.9.0-cdh5.9.1") //"4.9.0-cdh5.9.1"
 val scalaArmVersion = "1.4"
 val scalaConfigVersion = "0.3"
@@ -29,7 +30,7 @@ val twitterUtilVersion = "6.27.0"
 
 lazy val commonSettings = Seq(
   organization := "com.github.andr83",
-  version := "0.1.10",
+  version := "0.1.11",
   scalaVersion := "2.10.6",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers += Resolver.sonatypeRepo("releases"),
@@ -144,7 +145,7 @@ lazy val spark = project
       "com.github.scopt" %% "scopt" % scoptVersion,
       "org.apache.spark" %% "spark-core" % sparkVersion
         excludeAll (sparkExclusions: _*),
-      "org.apache.httpcomponents" % "httpclient" % "4.5.2"
+      "com.squareup.okhttp3" % "okhttp" % okHttpVersion
     ) ++ hadoopDependencies
   )
   .dependsOn(core)
@@ -160,7 +161,7 @@ lazy val sql = project
       "org.apache.spark" %% "spark-hive" % sparkVersion,
       "ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseJdbcVersion,
       "com.zaxxer" % "HikariCP" % hikariVersion,
-      "org.apache.phoenix" % "phoenix-client" % phoenixVersion //% "provided"
+      "org.apache.phoenix" % "phoenix-client" % phoenixVersion % "provided"
     )
   )
   .dependsOn(spark)
