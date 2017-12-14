@@ -38,18 +38,18 @@ case class HttpSink(
     val serializedRdd = RDDUtils.serialize(rdd, serializer)
     serializedRdd.foreachPartition(it => {
       if (it.nonEmpty) {
-        val client = new OkHttpClient
+        val clientBuilder = new OkHttpClient.Builder
         codec match {
           case Some("gzip") =>
-            client.interceptors().add(new GzipRequestInterceptor)
+            clientBuilder.addInterceptor(new GzipRequestInterceptor)
           case Some(other) =>
             logger.error(s"Codec $other does not support.")
           case None =>
         }
+        val client = clientBuilder.build()
 
         val requestBuilder = new Request.Builder().url(url)
         headers.foreach { case (k, v) => requestBuilder.addHeader(k, v) }
-
         val items = it.toList
         logger.info(s"Sending ${items.size} records. Head is: ${items.head}")
 
@@ -75,7 +75,8 @@ case class HttpSink(
       if (response.isSuccessful) {
         logger.info(response.body().string())
       } else {
-        throw new IOException("Unexpected code " + response)
+        logger.error(s"Failed sending ${data.take(500)} message. Response: ${response.toString}")
+        throw new IOException("Unexpected code " + response.code())
       }
     } catch {
       case ex: Throwable =>

@@ -57,6 +57,7 @@ object HiveSource {
     case LongType => PLong(value.asInstanceOf[Long])
     case FloatType => PDouble(value.asInstanceOf[Float])
     case DoubleType => PDouble(value.asInstanceOf[Double])
+    case DateType => PDate(value.asInstanceOf[java.sql.Date].getTime)
     case BooleanType => PBool(value.asInstanceOf[Boolean])
     case TimestampType => PDate(value.asInstanceOf[Timestamp].getTime)
     case StructType(fields) => convert(value.asInstanceOf[Row])
