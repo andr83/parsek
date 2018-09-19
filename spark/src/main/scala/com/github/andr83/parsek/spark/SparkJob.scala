@@ -153,7 +153,7 @@ abstract class SparkJob extends LazyLogging {
           ConfigFactory.parseFile(path)
         }
       }
-      c.withFallback(_config).resolve()
+      c.withFallback(_config)
     }
   } text "Configuration file path. Support local and hdfs"
 
