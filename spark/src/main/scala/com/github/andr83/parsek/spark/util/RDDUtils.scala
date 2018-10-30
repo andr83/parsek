@@ -20,7 +20,7 @@ object RDDUtils extends LazyLogging {
   ): RDD[String] = {
     rdd.mapPartitions(it=> {
       val serializer = serializerFactory()
-      it.map(v=> new String(serializer.write(v).map(_.toChar)))
+      it.map(v=> new String(serializer.write(v), "UTF-8"))
     })
   }
 
@@ -35,10 +35,10 @@ object RDDUtils extends LazyLogging {
         val serializer = serializerFactory()
         it.flatMap(v=> {
           val keyOpt = partitioner(idx, v) map(key=> key.replaceAllLiterally("${partitionIndex}", idx.toString))
-          val res = serializer.write(v).map(_.toChar)
+          val res = serializer.write(v)
           for {
             key <- keyOpt
-            value <- if(res.isEmpty) None else Some(new String(res))
+            value <- if(res.isEmpty) None else Some(new String(res, "UTF-8"))
           } yield key -> value
         })
     }
